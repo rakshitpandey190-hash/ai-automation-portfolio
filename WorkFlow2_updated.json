@@ -1,0 +1,1185 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "com.twilio.messaging.inbound-message.received",
+          "com.twilio.voice.insights.call-summary.complete"
+        ]
+      },
+      "type": "n8n-nodes-base.twilioTrigger",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        -640
+      ],
+      "id": "53feb4f5-3406-4952-850e-9c62d4ba906b",
+      "name": "Receive Shift Requests",
+      "webhookId": "29e7abcf-5318-4d56-a244-edec32a3822b",
+      "credentials": {
+        "twilioApi": {
+          "id": "8DblD6EUWfZfahE6",
+          "name": "Twilio account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "filterByFormula": "={Phone}={{ $('Receive Shift Requests').item.json?.data?.from ? $('Receive Shift Requests').item?.json?.data?.from?.toJsonString() : $('Receive Shift Requests').item.json.From?.toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -640
+      ],
+      "id": "e844161e-2c65-4759-89f5-ae3e7c7a99b3",
+      "name": "Check whether Phone no. is present in the Database.",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2480d26b-f075-449a-9391-38203a8f2ce8",
+              "leftValue": "={{ ($(\"Receive Shift Requests\").item.json?.data?.body || $(\"Receive Shift Requests1\").item.json?.Body || \"\").toLowerCase().replace(/\\s+/g, \" \").replace(/[\\u200B-\\u200D\\uFEFF]/g, \"\").trim() }}",
+              "rightValue": "={{\"yes\"}}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        -640
+      ],
+      "id": "1127bbc0-db92-46fc-bbce-7ec7bbe48814",
+      "name": "Check Intent Of The Message."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f01e447d-ca43-4798-ac2e-b5310b21f488",
+              "leftValue": "={{ $json['Shift Approval'].toJsonString() }}",
+              "rightValue": "\"disapproved\"",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "cb5d2342-5950-45b7-8512-16ed19ce91e3",
+              "leftValue": "={{ $json['Shift Approval'].toJsonString() }}",
+              "rightValue": "\"approved\"",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "61460b62-a60c-43a9-ba5b-66f31a00ffc9",
+              "leftValue": "={{ $json['Shift Status']?? [] }}",
+              "rightValue": "\"rejected\"",
+              "operator": {
+                "type": "array",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -736
+      ],
+      "id": "90360b38-2494-4b05-8d35-411dcb348923",
+      "name": "Check Shift approval and Shift status."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Shift Status": "accepted",
+            "Shift Approval": "in progress",
+            "Employee ID": "={{ $json[\"Employee ID\"] }}"
+          },
+          "matchingColumns": [
+            "Employee ID"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Worker Replaced",
+              "displayName": "Worker Replaced",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Shift Approval",
+              "displayName": "Shift Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "approved ",
+                  "value": "approved "
+                },
+                {
+                  "name": "disapproved ",
+                  "value": "disapproved "
+                },
+                {
+                  "name": "in progress",
+                  "value": "in progress"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Shift Status",
+              "displayName": "Shift Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "accepted",
+                  "value": "accepted"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Call-Off-History ID",
+              "displayName": "Call-Off-History ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        -736
+      ],
+      "id": "b2232f06-011d-4153-b8e2-8ed42d065525",
+      "name": "Set the worker's status as 'Accepted'",
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c76549c4-edc3-477e-9a23-993d7c732e58",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -144,
+        -640
+      ],
+      "id": "42f4ab5d-9e09-404b-910c-341dd0151aaa",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbladWxvNnnzVW3AB",
+          "mode": "list",
+          "cachedResultName": "Call-Off History",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tbladWxvNnnzVW3AB"
+        },
+        "filterByFormula": "={Call-Off ID}={{ $json.fields['Call-Off-History ID'].toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        752,
+        -736
+      ],
+      "id": "0a6f9b4b-b674-4f58-80fe-14f43d2f45aa",
+      "name": "Search from Call Off History",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblaKBnLUSVwbVvCd",
+          "mode": "list",
+          "cachedResultName": "Employees",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblaKBnLUSVwbVvCd"
+        },
+        "filterByFormula": "={Employee ID}={{ $('Set the worker\\'s status as \\'Accepted\\'').item.json.fields['Employee ID'].toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        976,
+        -736
+      ],
+      "id": "e3cd262f-5cb7-492c-9063-da2ebed77cfc",
+      "name": "Check the Database for Matched Worker's Data",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblaKBnLUSVwbVvCd",
+          "mode": "list",
+          "cachedResultName": "Employees",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblaKBnLUSVwbVvCd"
+        },
+        "filterByFormula": "={Full Name} = {{ $('Check whether Phone no. is present in the Database.').first().json['Worker Replaced'].toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        -736
+      ],
+      "id": "251ff5e1-2599-494a-94ea-5debd127c03f",
+      "name": "Search Records of Call Off Worker",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkkeeLvreccTrbf",
+          "mode": "list",
+          "cachedResultName": "Locations",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblkkeeLvreccTrbf"
+        },
+        "id": "={{ $json['Location'].last() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2096,
+        -736
+      ],
+      "id": "1a44122e-6a60-4b41-a76c-24295ebc5478",
+      "name": "Get Data From Locations Table.",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbladWxvNnnzVW3AB",
+          "mode": "list",
+          "cachedResultName": "Call-Off History",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tbladWxvNnnzVW3AB"
+        },
+        "filterByFormula": "={Employee ID}={{ $json[\"Employee ID\"].toJsonString() }}\n",
+        "returnAll": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1424,
+        -736
+      ],
+      "id": "61604dcf-d697-4604-ad0f-ac2487c6cfde",
+      "name": "Search records7",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the call-off worker's employee record\nconst employeeRecord = $('Search Records of Call Off Worker').first();\nif (!employeeRecord) return [{ json: { id: null, noShiftFound: true } }];\n\n// The Airtable Employees record ID (e.g. \"recobw7UdAyGy6zWV\")\nconst employeeId = employeeRecord.json.id;\n\n// Define today in America/Los_Angeles timezone\nconst formatter = new Intl.DateTimeFormat('en-GB', {\n  timeZone: 'America/Los_Angeles',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit'\n});\nconst todayStr = formatter.format(new Date());\n\nconst allShifts = $input.all();\n\nconst todaysShifts = allShifts.filter(item => {\n  // WorkFlow2-1: Airtable returns flat json (no .fields wrapper)\n  // But safely support both formats just in case\n  const shift = item.json.fields ?? item.json;\n\n  // \"Employee ID\" is a linked record array like [\"recobw7UdAyGy6zWV\"]\n  const empField = shift['Employee ID'] ?? shift['Employee'] ?? [];\n  const employeeMatch = Array.isArray(empField)\n    ? empField.includes(employeeId)\n    : empField === employeeId;\n\n  if (!employeeMatch) return false;\n\n  // \"Shift Date/Time\" is the date field in Call-Off History\n  // \"Start\" is used in Employee Shift table — check both\n  const startVal = shift['Shift Date/Time'] ?? shift['Start'] ?? shift['Shift DateTime'];\n  if (!startVal) return false;\n\n  const shiftDateStr = formatter.format(new Date(startVal));\n  return shiftDateStr === todayStr;\n});\n\nif (todaysShifts.length === 0) {\n  return [{ json: { id: null, noShiftFound: true } }];\n}\n\n// Flatten output: merge record id + fields into one clean object\nreturn todaysShifts.map(item => {\n  const raw = item.json;\n  const fields = raw.fields ?? raw;\n  return {\n    json: {\n      id: raw.id ?? null,\n      ...fields\n    },\n    pairedItem: item.pairedItem\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        -736
+      ],
+      "id": "16af1b8b-a43d-454d-96b3-d83f87a025bb",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Shift Request Approval\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"/><meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\"><title>Call-Off Replacement Acceptance</title></head><body style=\\\"margin: 0; padding: 0; background-color: #f2f4f6; font-family: Arial, sans-serif;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"background-color: #f2f4f6;\\\"><tr><td align=\\\"center\\\" style=\\\"padding: 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;\\\"><tr><td style=\\\"text-align:center; padding: 40px 20px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;\\\"><h2 style=\\\"font-size: 26px; color: #343a40; margin: 0 0 10px 0;\\\">📋 Call-Off Replacement Acceptance</h2><p style=\\\"font-size: 16px; color: #6c757d; margin: 0;\\\">The below worker would like to accept the shift that requires coverage. Details below.</p></td></tr><tr><td style=\\\"padding: 30px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #eafaf1; color: #1d8a54; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">✔️</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Replacement Candidate</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Phone + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Email + \"</td></tr></table></td></tr></table><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #f1f3f5; color: #5a6876; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">📅</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Call-Off Worker</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Phone (Formatted)'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json.Email + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Location:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $json['Location Name/Code'] + \"</td></tr></table></td></tr></table></td></tr><tr><td style=\\\"text-align: center; padding: 10px 0 40px 0;\\\"><a href=\\\"https://tooling.app.n8n.cloud/form/342ca560-4c1c-4107-9614-6bc9f6e0207a?id=\" + $('Check the Database for Matched Worker\\'s Data').item.json.id + \"&Manager_ID=MGR001&LeaveID=\" + $('Search Records of Call Off Worker').item.json.id + \"\\\" style=\\\"display: inline-block; background: #28a745; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(40,167,69,0.3);\\\">Open Approval Form</a><p style=\\\"font-size: 13px; color: #adb5bd; margin-top: 20px; margin-bottom: 0;\\\">Click the button to submit your decision.</p></td></tr></table></td></tr></table></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"frank@elitesecurityspecialists.com\" } }] }, \"saveToSentItems\": true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2320,
+        -736
+      ],
+      "id": "6323ec98-c888-4dbb-9153-7f11bbcb2db3",
+      "name": "Send a mail to MGR1",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Shift Request Approval\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"/><meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\"><title>Call-Off Replacement Acceptance</title></head><body style=\\\"margin: 0; padding: 0; background-color: #f2f4f6; font-family: Arial, sans-serif;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"background-color: #f2f4f6;\\\"><tr><td align=\\\"center\\\" style=\\\"padding: 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;\\\"><tr><td style=\\\"text-align:center; padding: 40px 20px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;\\\"><h2 style=\\\"font-size: 26px; color: #343a40; margin: 0 0 10px 0;\\\">📋 Call-Off Replacement Acceptance</h2><p style=\\\"font-size: 16px; color: #6c757d; margin: 0;\\\">The below worker would like to accept the shift that requires coverage. Details below.</p></td></tr><tr><td style=\\\"padding: 30px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #eafaf1; color: #1d8a54; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">✔️</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Replacement Candidate</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Phone + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Email + \"</td></tr></table></td></tr></table><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #f1f3f5; color: #5a6876; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">📅</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Call-Off Worker</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Phone (Formatted)'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json.Email + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Location:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Get Data From Locations Table.').item.json['Location Name/Code'] + \"</td></tr></table></td></tr></table></td></tr><tr><td style=\\\"text-align: center; padding: 10px 0 40px 0;\\\"><a href=\\\"https://tooling.app.n8n.cloud/form/342ca560-4c1c-4107-9614-6bc9f6e0207a?id=\" + $('Check the Database for Matched Worker\\'s Data').item.json.id + \"&Manager_ID=MGR002&LeaveID=\" + $('Search Records of Call Off Worker').item.json.id + \"\\\" style=\\\"display: inline-block; background: #28a745; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(40,167,69,0.3);\\\">Open Approval Form</a><p style=\\\"font-size: 13px; color: #adb5bd; margin-top: 20px; margin-bottom: 0;\\\">Click the button to submit your decision.</p></td></tr></table></td></tr></table></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"Robert@elitesecurityspecialists.com\" } }] }, \"saveToSentItems\": true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2544,
+        -736
+      ],
+      "id": "145b1197-35d6-433d-9359-b07b73afbd1d",
+      "name": "Send a mail to MGR5",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Shift Request Approval\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"/><meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\"><title>Call-Off Replacement Acceptance</title></head><body style=\\\"margin: 0; padding: 0; background-color: #f2f4f6; font-family: Arial, sans-serif;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"background-color: #f2f4f6;\\\"><tr><td align=\\\"center\\\" style=\\\"padding: 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;\\\"><tr><td style=\\\"text-align:center; padding: 40px 20px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;\\\"><h2 style=\\\"font-size: 26px; color: #343a40; margin: 0 0 10px 0;\\\">📋 Call-Off Replacement Acceptance</h2><p style=\\\"font-size: 16px; color: #6c757d; margin: 0;\\\">The below worker would like to accept the shift that requires coverage. Details below.</p></td></tr><tr><td style=\\\"padding: 30px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #eafaf1; color: #1d8a54; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">✔️</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Replacement Candidate</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Phone + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Email + \"</td></tr></table></td></tr></table><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #f1f3f5; color: #5a6876; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">📅</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Call-Off Worker</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Phone (Formatted)'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json.Email + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Location:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Get Data From Locations Table.').item.json['Location Name/Code'] + \"</td></tr></table></td></tr></table></td></tr><tr><td style=\\\"text-align: center; padding: 10px 0 40px 0;\\\"><a href=\\\"https://tooling.app.n8n.cloud/form/342ca560-4c1c-4107-9614-6bc9f6e0207a?id=\" + $('Check the Database for Matched Worker\\'s Data').item.json.id + \"&Manager_ID=MGR003&LeaveID=\" + $('Search Records of Call Off Worker').item.json.id + \"\\\" style=\\\"display: inline-block; background: #28a745; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(40,167,69,0.3);\\\">Open Approval Form</a><p style=\\\"font-size: 13px; color: #adb5bd; margin-top: 20px; margin-bottom: 0;\\\">Click the button to submit your decision.</p></td></tr></table></td></tr></table></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"thomas@elitesecurityspecialists.com\" } }] }, \"saveToSentItems\": true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2768,
+        -736
+      ],
+      "id": "de6918a8-152b-40c2-bb40-6cacc70dde0a",
+      "name": "Send a mail to MGR6",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Shift Request Approval\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"/><meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\"><title>Call-Off Replacement Acceptance</title></head><body style=\\\"margin: 0; padding: 0; background-color: #f2f4f6; font-family: Arial, sans-serif;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"background-color: #f2f4f6;\\\"><tr><td align=\\\"center\\\" style=\\\"padding: 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;\\\"><tr><td style=\\\"text-align:center; padding: 40px 20px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;\\\"><h2 style=\\\"font-size: 26px; color: #343a40; margin: 0 0 10px 0;\\\">📋 Call-Off Replacement Acceptance</h2><p style=\\\"font-size: 16px; color: #6c757d; margin: 0;\\\">The below worker would like to accept the shift that requires coverage. Details below.</p></td></tr><tr><td style=\\\"padding: 30px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #eafaf1; color: #1d8a54; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">✔️</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Replacement Candidate</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Phone + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Email + \"</td></tr></table></td></tr></table><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #f1f3f5; color: #5a6876; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">📅</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Call-Off Worker</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Phone (Formatted)'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json.Email + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Location:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Get Data From Locations Table.').item.json['Location Name/Code'] + \"</td></tr></table></td></tr></table></td></tr><tr><td style=\\\"text-align: center; padding: 10px 0 40px 0;\\\"><a href=\\\"https://tooling.app.n8n.cloud/form/342ca560-4c1c-4107-9614-6bc9f6e0207a?id=\" + $('Check the Database for Matched Worker\\'s Data').item.json.id + \"&Manager_ID=MGR004&LeaveID=\" + $('Search Records of Call Off Worker').item.json.id + \"\\\" style=\\\"display: inline-block; background: #28a745; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(40,167,69,0.3);\\\">Open Approval Form</a><p style=\\\"font-size: 13px; color: #adb5bd; margin-top: 20px; margin-bottom: 0;\\\">Click the button to submit your decision.</p></td></tr></table></td></tr></table></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"Odilia@elitesecurityspecialists.com\" } }] }, \"saveToSentItems\": true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2992,
+        -736
+      ],
+      "id": "c78d09d4-c7ba-4e7a-b910-c1eeead22d16",
+      "name": "Send a mail to MGR7",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblZQinqhYMlWX76f",
+          "mode": "list",
+          "cachedResultName": "Employee Shift",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblZQinqhYMlWX76f"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1648,
+        -736
+      ],
+      "id": "560d6ac4-3f5c-45a8-a11e-d8e3149f2550",
+      "name": "Search records",
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Shift Request Approval\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"/><meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\"><title>Call-Off Replacement Acceptance</title></head><body style=\\\"margin: 0; padding: 0; background-color: #f2f4f6; font-family: Arial, sans-serif;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"background-color: #f2f4f6;\\\"><tr><td align=\\\"center\\\" style=\\\"padding: 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;\\\"><tr><td style=\\\"text-align:center; padding: 40px 20px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;\\\"><h2 style=\\\"font-size: 26px; color: #343a40; margin: 0 0 10px 0;\\\">📋 Call-Off Replacement Acceptance</h2><p style=\\\"font-size: 16px; color: #6c757d; margin: 0;\\\">The below worker would like to accept the shift that requires coverage. Details below.</p></td></tr><tr><td style=\\\"padding: 30px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #eafaf1; color: #1d8a54; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">✔️</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Replacement Candidate</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Phone + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Email + \"</td></tr></table></td></tr></table><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #f1f3f5; color: #5a6876; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">📅</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Call-Off Worker</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Phone (Formatted)'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json.Email + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Location:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $json['Location Name/Code'] + \"</td></tr></table></td></tr></table></td></tr><tr><td style=\\\"text-align: center; padding: 10px 0 40px 0;\\\"><a href=\\\"https://tooling.app.n8n.cloud/form/342ca560-4c1c-4107-9614-6bc9f6e0207a?id=\" + $('Check the Database for Matched Worker\\'s Data').item.json.id + \"&Manager_ID=MGR006&LeaveID=\" + $('Search Records of Call Off Worker').item.json.id + \"\\\" style=\\\"display: inline-block; background: #28a745; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(40,167,69,0.3);\\\">Open Approval Form</a><p style=\\\"font-size: 13px; color: #adb5bd; margin-top: 20px; margin-bottom: 0;\\\">Click the button to submit your decision.</p></td></tr></table></td></tr></table></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"info@siliconstreamtechnology.com\" } }] }, \"saveToSentItems\": true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3440,
+        -736
+      ],
+      "id": "d7a3fbcf-5d6f-4de1-8b2b-bf864935d938",
+      "name": "Send a mail to MGR",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Shift Request Approval\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"/><meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\"><title>Call-Off Replacement Acceptance</title></head><body style=\\\"margin: 0; padding: 0; background-color: #f2f4f6; font-family: Arial, sans-serif;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"background-color: #f2f4f6;\\\"><tr><td align=\\\"center\\\" style=\\\"padding: 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;\\\"><tr><td style=\\\"text-align:center; padding: 40px 20px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;\\\"><h2 style=\\\"font-size: 26px; color: #343a40; margin: 0 0 10px 0;\\\">📋 Call-Off Replacement Acceptance</h2><p style=\\\"font-size: 16px; color: #6c757d; margin: 0;\\\">The below worker would like to accept the shift that requires coverage. Details below.</p></td></tr><tr><td style=\\\"padding: 30px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #eafaf1; color: #1d8a54; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">✔️</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Replacement Candidate</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Phone + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Check whether Phone no. is present in the Database.').item.json.Email + \"</td></tr></table></td></tr></table><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 25px; overflow: hidden;\\\"><tr><td style=\\\"background: #f1f3f5; color: #5a6876; padding: 15px 20px; border-bottom: 1px solid #dee2e6;\\\"><span style=\\\"font-size: 24px; vertical-align: middle; margin-right: 12px;\\\">📅</span><span style=\\\"font-size: 18px; font-weight: bold; vertical-align: middle;\\\">Call-Off Worker</span></td></tr><tr><td style=\\\"padding: 10px 20px;\\\"><table width=\\\"100%\\\" border=\\\"0\\\" cellspacing=\\\"0\\\" cellpadding=\\\"0\\\" style=\\\"font-size: 15px;\\\"><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Full Name:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Full Name'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Employee ID:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Employee ID'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Phone No.:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json['Phone (Formatted)'] + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Email:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Search Records of Call Off Worker').item.json.Email + \"</td></tr><tr style=\\\"height: 40px;\\\"><td style=\\\"color: #495057; font-weight: bold;\\\">Location:</td><td style=\\\"color: #6c757d; text-align: right;\\\">\" + $('Get Data From Locations Table.').item.json['Location Name/Code'] + \"</td></tr></table></td></tr></table></td></tr><tr><td style=\\\"text-align: center; padding: 10px 0 40px 0;\\\"><a href=\\\"https://tooling.app.n8n.cloud/form/342ca560-4c1c-4107-9614-6bc9f6e0207a?id=\" + $('Check the Database for Matched Worker\\'s Data').item.json.id + \"&Manager_ID=MGR005&LeaveID=\" + $('Search Records of Call Off Worker').item.json.id + \"\\\" style=\\\"display: inline-block; background: #28a745; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(40,167,69,0.3);\\\">Open Approval Form</a><p style=\\\"font-size: 13px; color: #adb5bd; margin-top: 20px; margin-bottom: 0;\\\">Click the button to submit your decision.</p></td></tr></table></td></tr></table></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"ivy@aisus.ai\" } }] }, \"saveToSentItems\": true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3216,
+        -736
+      ],
+      "id": "1235ff04-dc6e-46e6-a4a1-8f368d527d9a",
+      "name": "Send a mail to MGR9",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Shift Approval": "in progress",
+            "Shift Status": "declined",
+            "Employee ID": "={{ $json[\"Employee ID\"] }}"
+          },
+          "matchingColumns": [
+            "Employee ID"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Worker Replaced",
+              "displayName": "Worker Replaced",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Shift Approval",
+              "displayName": "Shift Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "approved ",
+                  "value": "approved "
+                },
+                {
+                  "name": "disapproved ",
+                  "value": "disapproved "
+                },
+                {
+                  "name": "in progress",
+                  "value": "in progress"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Shift Status",
+              "displayName": "Shift Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "accepted",
+                  "value": "accepted"
+                },
+                {
+                  "name": "declined",
+                  "value": "declined"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Call-Off-History ID",
+              "displayName": "Call-Off-History ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        -544
+      ],
+      "id": "0a37ef72-d5fb-43fa-962c-9a0cf1f7c5a7",
+      "name": "Update Matched Worker: Declined",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"❌ Matched Worker Declined Shift — \" + ($('Check whether Phone no. is present in the Database.').first()?.json?.fields?.['Full Name'] || 'Unknown Worker'), \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"><title>Worker Declined Shift</title></head><body style=\\\"margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background-color:#f4f4f4;\\\"><table width=\\\"100%\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\" border=\\\"0\\\" style=\\\"background-color:#f4f4f4;padding:20px 0;\\\"><tr><td align=\\\"center\\\"><table width=\\\"600\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\" border=\\\"0\\\" style=\\\"background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);\\\"><tr><td style=\\\"background:#b45309;padding:40px 30px;text-align:center;\\\"><h1 style=\\\"margin:0 0 10px 0;font-size:28px;font-weight:bold;color:white;\\\">❌ Worker Declined Shift</h1><p style=\\\"color:#fde68a;font-size:16px;margin:0;\\\">Elite Security Specialists</p></td></tr><tr><td style=\\\"padding:40px 30px;\\\"><p style=\\\"color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;\\\"><strong>\" + ($('Check whether Phone no. is present in the Database.').item.json['Full Name']|| 'Unknown Worker') + \"</strong> has declined to cover this shift.</p><p style=\\\"color:#374151;font-size:16px;line-height:1.6;margin:0;\\\">No further action is required.</p></td></tr><tr><td style=\\\"background:#f8fafc;padding:20px 30px;text-align:center;border-top:1px solid #e2e8f0;\\\"><p style=\\\"color:#94a3b8;font-size:12px;margin:0;\\\">This is an automated notification from ESS Call-Off Management System.</p></td></tr></table></td></tr></table></body></html>\" },\"toRecipients\": [ { \"emailAddress\": { \"address\": \"frank@elitesecurityspecialists.com\" } }, { \"emailAddress\": { \"address\": \"Robert@elitesecurityspecialists.com\" } }, { \"emailAddress\": { \"address\": \"thomas@elitesecurityspecialists.com\" } }, { \"emailAddress\": { \"address\": \"Odilia@elitesecurityspecialists.com\" } }, { \"emailAddress\": { \"address\": \"ivy@aisus.ai\" } }, { \"emailAddress\": { \"address\": \"info@siliconstreamtechnology.com\" } } ] }, \"saveToSentItems\": true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        -544
+      ],
+      "id": "a098bfe3-ba6a-4c0a-8641-6bea4416bed4",
+      "name": "Notify Manager: Worker Declined Shift1",
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Receive Shift Requests": {
+      "main": [
+        [
+          {
+            "node": "Check whether Phone no. is present in the Database.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check whether Phone no. is present in the Database.": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Intent Of The Message.": {
+      "main": [
+        [
+          {
+            "node": "Check Shift approval and Shift status.",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Matched Worker: Declined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Shift approval and Shift status.": {
+      "main": [
+        [
+          {
+            "node": "Set the worker's status as 'Accepted'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set the worker's status as 'Accepted'": {
+      "main": [
+        [
+          {
+            "node": "Search from Call Off History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Check Intent Of The Message.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search from Call Off History": {
+      "main": [
+        [
+          {
+            "node": "Check the Database for Matched Worker's Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the Database for Matched Worker's Data": {
+      "main": [
+        [
+          {
+            "node": "Search Records of Call Off Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Records of Call Off Worker": {
+      "main": [
+        [
+          {
+            "node": "Search records7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Data From Locations Table.": {
+      "main": [
+        [
+          {
+            "node": "Send a mail to MGR1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records7": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get Data From Locations Table.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a mail to MGR1": {
+      "main": [
+        [
+          {
+            "node": "Send a mail to MGR5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a mail to MGR5": {
+      "main": [
+        [
+          {
+            "node": "Send a mail to MGR6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a mail to MGR6": {
+      "main": [
+        [
+          {
+            "node": "Send a mail to MGR7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a mail to MGR7": {
+      "main": [
+        [
+          {
+            "node": "Send a mail to MGR9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a mail to MGR": {
+      "main": [
+        []
+      ]
+    },
+    "Send a mail to MGR9": {
+      "main": [
+        [
+          {
+            "node": "Send a mail to MGR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Matched Worker: Declined": {
+      "main": [
+        [
+          {
+            "node": "Notify Manager: Worker Declined Shift1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "090ab597ad25e7a672f4ec6c76059e29c862c56e1bca98bfbd156147928a9c41"
+  }
+}

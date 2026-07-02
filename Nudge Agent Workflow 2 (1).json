@@ -1,0 +1,4102 @@
+{
+  "name": "Nudge Agent Workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        1904
+      ],
+      "id": "97d38087-eb03-4676-a2e1-c60964a79479",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1C5ntqNaOr9w22sIULEnx2edZlQ9wqO1M",
+            "mode": "list",
+            "cachedResultName": "1. Clients in Onboarding",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1C5ntqNaOr9w22sIULEnx2edZlQ9wqO1M"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        224,
+        1904
+      ],
+      "id": "65aac109-c6bd-4733-9eda-307d11f7dc5d",
+      "name": "Search files and folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": "=1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        1904
+      ],
+      "id": "3ba47789-be0a-4fe2-b16a-ec550f8b5562",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        672,
+        416
+      ],
+      "id": "92fdd202-37a3-4485-9faf-0fda36bd9654"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "1. Kickoff Phase",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        896,
+        416
+      ],
+      "id": "f7ff3457-29c7-4425-b80e-48249d71994c",
+      "name": "Search files and folders1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Implementation Checklist ",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1344,
+        416
+      ],
+      "id": "843143ea-8bc3-48ee-8605-f885e6b89035",
+      "name": "Search files and folders2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{$json[\"id\"]}}?supportsAllDrives=true&fields=id,name,mimeType",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        416
+      ],
+      "id": "d372b747-8d47-4c53-a554-4cc690f470a4",
+      "name": "HTTP Request",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "96e575bf-56e4-4617-89b7-d80b07263845",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "application/vnd.google-apps.spreadsheet",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        416
+      ],
+      "id": "3fc48e94-2361-4437-8f6c-456321f4777e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2240,
+        416
+      ],
+      "id": "934a8715-9bcc-4fb4-b90b-61a6fa1d33ac",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TfkPhLdTvPJnYB4g",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let count = 1;\nlet key = 2;\nlet groupedData = {}\nlet alltemplateStatusData = {\n  1: true,\n  2: false,\n  3: false,\n  4: false,\n  5: false,\n  6: false,\n  7: false,\n  8: false,\n  9: false,\n}\nlet allX = true;\nfor (const element of $input.all()) {\n  if(count == 1){\n    count +=1;\n    console.log(\"in continue\")\n  }else{\n    console.log(count)\n    if(!(key in groupedData)){\n      groupedData[`${key}`] = [];\n    }\n    console.log(\"after continue\")\n    count +=1;\n    console.log({key, groupedData, \"col_7\": element.json[\"col_7\"]})\n    groupedData[`${key}`].push(element.json)\n    if(element.json['col_6'] == \"\" && element.json['col_6']?.toLowerCase() != \"x\"){\n      console.log(\"in break statement\")\n      break;\n    }\n    \n    if(element.json['col_7'] != \"\" && element.json['col_7'] == key){\n      console.log(\"in true condition\")\n      alltemplateStatusData[`${key}`] = allX;\n      key += 1;\n      allX = true;\n    }\n  }\n}\nconst keys = Object.keys(alltemplateStatusData);\n\nlet lastTrueKey = 1;\n\nfor (const key of keys) {\n  if (alltemplateStatusData[key] === true) {\n    lastTrueKey = parseInt(key);\n  }\n}\nreturn {lastStep: lastTrueKey};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        416
+      ],
+      "id": "40c20e13-15e6-4fd9-b7b0-383b9e8b90cb",
+      "name": "Code in JavaScript",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_name",
+              "keyValue": "={{ $('Loop Over Items').first().json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2688,
+        416
+      ],
+      "id": "c53bcd8b-925c-4d94-a9cc-2e45a3d76be0",
+      "name": "Get row(s)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3b654564-9952-455e-a71f-24ee7ba98d3d",
+              "leftValue": "={{ !$json.steps_completed.split(\",\").includes($('Code in JavaScript').item.json.lastStep?.toString()) }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        416
+      ],
+      "id": "e27bc266-70d7-4811-bf18-f77886fc8e01",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Code in JavaScript').item.json.lastStep }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "4970a52a-37cb-456e-88d0-22f9f3ae0577"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a31a5332-f323-4ed8-b3b4-61be36eb9b5e",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.lastStep }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9b3b1821-821d-4e4a-afe9-b743701cd1a1",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.lastStep }}",
+                    "rightValue": 4,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "029d6277-4ba1-47a5-a8e2-dc5035d808ad",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.lastStep }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d28c47a8-032e-4ad5-a3d8-ed7c9604f231",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.lastStep }}",
+                    "rightValue": 6,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a316bb11-7f2f-4b1f-8205-a144c0440784",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.lastStep }}",
+                    "rightValue": 7,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "65a67254-8892-49e0-8215-e5ca46aff71d",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.lastStep }}",
+                    "rightValue": 8,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        3136,
+        336
+      ],
+      "id": "a64d6878-fd79-4779-861a-56ff96165bc4",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "=Welcome to Caddy Build Phase (Part I), Team {{ $('Get row(s)').item.json.client_name }}! ",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <style>\n      /* Basic reset for preview purposes */\n      body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }\n    </style>\n  </head>\n  <body>\n    <div>\n      <p>Hi Team {{ $('Get row(s)').item.json.client_name }},</p>\n      <p>Welcome to the Build Phase! We're excited to move forward with you.</p>\n      <p>\n        Please start by&nbsp;<a\n          href=\"https://drive.google.com/file/d/{{ $json.id }}/view\"\n          target=\"_blank\"\n          >watching the Presets Upload Tutorial (Part I)</a\n        >&nbsp;for detailed instructions and next steps.\n      </p>\n      <p>\n        Here is&nbsp;<a\n          href=\"https://docs.google.com/spreadsheets/d/{{ $('Search files and folders4').item.json.id }}/edit\"\n          target=\"_blank\"\n          >your dedicated Presets Upload Template</a\n        >. Once you have finished Part I of the Presets Template, our team will\n        review to make sure everything looks good before moving on to Part II.\n      </p>\n      <p>\n       If you have any\n        questions, feel free to reach out to us and we would be happy to\n        help.&nbsp;\n      </p>\n      <p>Best regards,</p>\n      <p>Ron</p>\n    </div>\n    <font color=\"#888888\"\n      ><span class=\"gmail_signature_prefix\">-- </span><br /><img\n        src=\"https://ci3.googleusercontent.com/meips/ADKq_NaAWc2-ah_YhKar6yDlxhnmX4m2lLOKv8RtzFLoYBo8Mgr7y9MOQfPlgOWV6f1ruID3L-cfIYyS2_d7oQNuZba9QnJlnB4M0VkOPv7Rk4rGp7f64r2Xm1ZSHPxygBbYAlQ5ZAYI823lLO3qfsHKwE9rU6LDSj-kVXTH6tg1=s0-d-e1-ft#https://t.inquisitive-tomatoes.com/+?y=49q24eh26cqjao9pc5imaphm6ssj6cj1cdhj8c34ckom6c9l70pm6dhp6oh0====\"\n        id=\"m_2562818308220689643m_4893532625156050581apollo_tracker\"\n        style=\"width: 0px; max-height: 0px; overflow: hidden; display: block\"\n        class=\"CToWUd\"\n        data-bit=\"iit\"\n        jslog=\"138226; u014N:xr6bB; 53:WzAsMl0.\" />\n      <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n        <div dir=\"ltr\">\n          <div>\n            <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n          </div>\n          <div><font color=\"#000000\">Chief Executive Officer, Caddy</font></div>\n          <div>\n            <span style=\"line-height: 17.6px\"\n              ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n            >\n          </div>\n          <div>\n            <span style=\"line-height: 17.6px\"\n              ><font color=\"#000000\"\n                ><a\n                  href=\"http://www.joincaddy.com/\"\n                  target=\"_blank\"\n                  data-saferedirecturl=\"https://www.google.com/url?q=http://www.joincaddy.com/&amp;source=gmail&amp;ust=1763461623436000&amp;usg=AOvVaw3ftqrUMLMdaI5_5EZfsnLf\"\n                  >See Caddy in Action</a\n                ></font\n              ></span\n            >\n          </div>\n          <div>\n            <span style=\"line-height: 17.6px\"\n              ><font color=\"#000000\"><br /></font\n            ></span>\n          </div>\n          <div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><strong\n                  ><font color=\"#000000\"\n                    ><img\n                      src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                      width=\"200\"\n                      height=\"47\"\n                      class=\"CToWUd\"\n                      data-bit=\"iit\" /><br /></font></strong\n              ></span>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><strong\n                  ><font color=\"#000000\"><br /></font></strong\n              ></span>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                ><span style=\"color: rgb(255, 0, 0)\"\n                  >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                  delayed outside these hours)</span\n                ><strong><font color=\"#000000\"></font></strong\n              ></span>\n            </div>\n            <div>\n              <span style=\"color: rgb(0, 0, 0)\"\n                ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                  ><span style=\"color: rgb(80, 0, 80)\"\n                    ><strong><br /></strong></span></span\n              ></span>\n            </div>\n          </div>\n        </div>\n      </div>\n      <div></div\n    ></font>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4032,
+        272
+      ],
+      "id": "ca823c8f-aafa-4d69-a51f-c7a456245c69",
+      "name": "Send a message",
+      "webhookId": "dfa5ad0b-e2bf-45cc-889d-8aaa3543bf09",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Get row(s)').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "={{ $('Get row(s)').item.json.steps_completed+\",\"+$('Code in JavaScript').item.json.lastStep }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4256,
+        272
+      ],
+      "id": "f3611ca4-9dd1-4bb8-b054-bcc7b7403adc",
+      "name": "Update row(s)"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "2. Build Phase",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Loop Over Items').first().json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3360,
+        272
+      ],
+      "id": "7af8c0e1-9aad-447f-80c1-811a065ac511",
+      "name": "Search files and folders3",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Presets Upload Template",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3584,
+        272
+      ],
+      "id": "a2d0f70b-df40-43fa-bf7b-9dec38d6fbf2",
+      "name": "Search files and folders4",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "2. Build Phase",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Loop Over Items').first().json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3360,
+        80
+      ],
+      "id": "0fce7424-0736-447e-98ac-ddcfc4be7541",
+      "name": "Search files and folders5",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "=Welcome to Caddy Build Phase (Part II), Team {{ $('Get row(s)').item.json.client_name }}!",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <style>\n      /* Basic reset for preview purposes */\n      body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }\n    </style>\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        <p>Hi Team {{ $('Get row(s)').item.json.client_name }},</p>\n        <p>\n          Welcome to the Build Phase Part II! We're excited to move forward with\n          you.\n        </p>\n        <p>\n          Please start by&nbsp;<a\n            href=\"https://drive.google.com/file/d/{{ $json.id }}/view?usp=sharing\"\n            target=\"_blank\"\n            >watching the Presets Upload Tutorial (Part II)</a\n          >&nbsp;for detailed instructions and next steps.\n        </p>\n        <p>\n          <b>Carlo</b>, can you please do a quick review of Part I of&nbsp;<a\n            href=\"https://docs.google.com/spreadsheets/d/{{ $('Search files and folders6').item.json.id }}/edit\"\n            target=\"_blank\"\n            >their dedicated Presets Upload Template</a\n          >&nbsp;to ensure everything looks to be in good order?\n        </p>\n        <p>\n          Once Carlo has reviewed and approved Part I, Gabrielle will help us\n          schedule a 30-minute call to walk through one example together for\n          Part II before you go through all the work.\n        </p>\n        <p>\n          Our team will continue to monitor your progress and reach out if it\n          seems as though you're running into blockers.\n        </p>\n        <p>\n          Alternatively, if you have any questions, feel free to reach out to us\n          and we would be happy to help.&nbsp;\n        </p>\n        <p>Best regards,</p>\n        <p>Ron</p>\n      </div>\n      <font color=\"#888888\"\n        ><span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a href=\"http://www.joincaddy.com/\" target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div><br /></div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div>\n        <div></div\n      ></font>\n    </div>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4032,
+        80
+      ],
+      "id": "9a302720-d76b-46ee-8211-fcc461d52ebb",
+      "name": "Send a message1",
+      "webhookId": "2196a233-30d7-42ba-b950-f7b907b1a3a6",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Get row(s)').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "={{ $('Get row(s)').item.json.steps_completed+\",\"+$('Code in JavaScript').item.json.lastStep }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4256,
+        80
+      ],
+      "id": "a8911105-c21c-4af2-88f0-fa80bbe612b5",
+      "name": "Update row(s)1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Presets Upload Template",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3584,
+        80
+      ],
+      "id": "d3d391f7-3ee1-411f-82d3-4f7433154fde",
+      "name": "Search files and folders6",
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Presets Upload Tutorial (Part II)",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Search files and folders5').item.json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3808,
+        80
+      ],
+      "id": "9f353a55-c07f-4c30-a252-719aa9b6eb9c",
+      "name": "Search files and folders7",
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "Caddy Knowledge Base [BOOKMARK ME]",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Training Phase Instructions</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        <div>Hi Team {{ $json.client_name }},</div>\n        <div><br /></div>\n        <div>\n          <span class=\"im\">\n            <div>\n              Great job mapping all your batch codes to their respective batch\n              formulas!\n            </div>\n            <div><br /></div>\n            <div>\n              <a\n                href=\"https://joincaddy.notion.site/Caddy-Knowledge-Base-b78bb00fbf6f427cb8a7a7979573f709\"\n                target=\"_blank\"\n                >Here is the link to the Caddy Knowledge Base</a\n              >.\n            </div>\n            <div><br /></div>\n            <div>\n              This is the home to our (growing) library of video tutorials for\n              not just the Training Phase of our implementation process, but\n              should you ever need to reference back on any tutorial moving\n              forward (great to share with new team members as well!).\n            </div>\n            <div><br /></div>\n            <div>\n              Can't find a tutorial you're looking for? Send me a note and we'll\n              be happy to either point you to the right page or record a video\n              tutorial for you.\n            </div>\n            <div><br /></div>\n            <div>\n              Please have all Caddy users watch all the video tutorials and flag\n              any scenarios where a video tutorial would be helpful. Once this\n              task is completed, kindly update your\n              <a\n                href=\"https://drive.google.com/file/d/{{ $('If').first().json.id }}/view\"\n                >Implementation Checklist</a\n              >\n              by marking an \"X\" in Column F.\n            </div>\n            <div><br /></div>\n            <div>\n              After the Training Phase, we can move onto the Testing Phase next\n              week where you will simulate daily workflows in your environment\n              before we go-live.\n            </div>\n            <div><br /></div>\n            <div>\n              Gabrielle, please start preparing their inventory upload template.\n            </div>\n          </span>\n          <span class=\"im\"\n            ><div><br /></div>\n            <div>\n              <b>Pro tip:&nbsp;</b>bookmark the Caddy Knowledge Base for easy\n              access.\n            </div>\n            <font color=\"#888888\"\n              ><font color=\"#888888\"\n                ><font color=\"#888888\"\n                  ><div><br /></div>\n                  <div>Ron</div></font\n                ></font\n              ></font\n            ></span\n          >\n        </div>\n      </div>\n      <span class=\"im\"\n        ><div><br /></div>\n        <span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a href=\"http://www.joincaddy.com/\" target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div>\n        <div></div\n      ></span>\n    </div>\n  </body>\n</html>",
+        "options": {
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3360,
+        848
+      ],
+      "id": "925cfd61-0e4c-40e3-954f-71fe96a711b0",
+      "name": "Send a message2",
+      "webhookId": "93d3aaa4-c46e-43a2-8875-dbcf51f43cbe",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Get row(s)').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "={{ $('Get row(s)').item.json.steps_completed+\",\"+$('Code in JavaScript').item.json.lastStep }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3584,
+        848
+      ],
+      "id": "2aaa3eba-3353-4b20-88f0-1e4545ee4c7c",
+      "name": "Update row(s)2"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "Caddy | Time to activate your accounts",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Welcome to Caddy</title>\n  </head>\n  <body>\n    <div>\n      <p>Hi Team {{ $('Get row(s)').item.json.client_name }},</p>\n      <p>Your Presets have been uploaded.</p>\n      <p>\n        You should have also just received an email invite to activate your\n        license. There's a 12 hour window before the invite expires. If it does\n        expire, please let us know so we can re-send the invite.\n      </p>\n      <p>\n        To fully activate your license(s), you'll need to sign into your mobile\n        app with your unique 4 digit pin.\n      </p>\n      <p>\n        Once you're in, the next step is to go into your Presets tab, inside\n        your Admin Portal, to set up your Batch Codes (lot code templates for\n        your batch formulas) for each Batch Formula. Once you've completed each\n        batch code template, please map them to each batch formula, also located\n        inside your Presets tab.\n      </p>\n      <p>\n        <b>Tip: </b>to future proof your business and limit the scope of\n        potential future recalls, <a href=\"https://www.joincaddy.com/blog/how-to-create-traceability-lot-codes-food-industry\">please consider adding unique identifiers</a> to\n        each batch formula's batch code template.\n      </p>\n      <p>\n        Once you've completed this task, please let us know and we'll review it\n        before moving into the training phase.<br /><br />Thanks!<font\n          color=\"#888888\"\n          ><br />Ron</font\n        >\n      </p>\n      <span style=\"color: rgb(80, 0, 80)\">\n        <p><span class=\"gmail_signature_prefix\">--</span><br /></p>\n        <div dir=\"ltr\" class=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\">\n                <font color=\"#000000\">C:&nbsp;+1.416.305.6148</font>\n              </span>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\">\n                <font color=\"#000000\"\n                  ><a\n                    href=\"https://d13r5V04.na1.hs-sales-engage.com/Ctc/5E+23284/d13r5V04/Jks2-6qcW69sMD-6lZ3pYV8X93H7mjCxpW5V2-M87qyB0fW2Ns6Lx2qrYYxW73tSgw8TRRvMW4TRQhr1KlL77N1jGkrp8hPrVVthJql9jJcgcW91GYV93NTVG1W7PC7rZ45dTBnW73qlk58LXlh5W6bcvNH70YfGcW5J_Y8F7_QqyHW3QmP4s87qvCjW8vGV7G8ZHT-VW5TrJrD5BnllkW5Tvmyd5G1WvbW1R0B3S1XR2NwVyrR8T4DxjTyW8dksBt34355jW8BvK7p2kz5zddQrSGY04\"\n                    target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                >\n              </span>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\">\n                <font color=\"#000000\"><br /></font>\n              </span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ></span\n                >\n              </div>\n            </div>\n          </div>\n        </div>\n      </span>\n    </div>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3360,
+        1232
+      ],
+      "id": "02da5d76-4ca1-4bf4-b12b-533cbce11cf8",
+      "name": "Send a message3",
+      "webhookId": "ee911a72-4d3f-48e0-a762-8f8003501b67",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Get row(s)').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "={{ $('Get row(s)').item.json.steps_completed+\",\"+$('Code in JavaScript').item.json.lastStep }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3584,
+        1232
+      ],
+      "id": "66c16d7c-d9f9-4945-b7bc-d19e6c013a04",
+      "name": "Update row(s)3"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "=Welcome to Caddy Test Phase, Team {{ $('Get row(s)').item.json.client_name }}!",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        <div>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >Hi Team {{ $('Get row(s)').item.json.client_name }},</font\n            >\n          </p>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >Welcome to the Test Phase! We're excited to move forward with\n              you.</font\n            >\n          </p>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >Please start by&nbsp;<a\n                href=\"https://drive.google.com/file/d/{{ $('Search files and folders10').item.json.id }}/view?usp=drive_link\"\n                target=\"_blank\"\n                >watching the Caddy Test Phase Overview</a\n              >&nbsp;video for detailed instructions and next steps.</font\n            >\n          </p>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >Carlo will help populate your admin portal with sample data\n              including batches, packaging, and associated raw materials. Once\n              this is ready, Carlo will notify via this email thread. This will\n              give your team a solid foundation to start your testing.</font\n            >\n          </p>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >You can manually add additional raw or packaging materials\n              through the admin portal or the mobile app, which is one of your\n              test scenarios. For products beyond the ones Carlo will set up,\n              you'll need to submit production and packaging forms via the\n              mobile app to create batches and finished products.</font\n            >\n          </p>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >Here is&nbsp;<a\n                href=\"https://docs.google.com/document/d/{{ $json.id }}/edit?usp=sharing\"\n                target=\"_blank\"\n                >your dedicated Test Phase Bingo Card</a\n              >&nbsp;. As you complete each task or scenario, please check off the\n              corresponding boxes.</font\n            >\n          </p>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >If you encounter critical blockers that may prevent a successful\n              go-live, please note them in the bottom section of the Bingo Card.\n              Reserve this space for \"must-have\" issues only. Any \"nice-to-have\"\n              feedback can be discussed and addressed after we go live.</font\n            >\n          </p>\n          <p>\n            <font face=\"arial, sans-serif\"\n              >This approach helps us stay focused and ensures we get you up and\n              running quickly and smoothly.</font\n            >\n          </p>\n          <p><font face=\"arial, sans-serif\">Best regards,</font></p>\n          <p><font face=\"arial, sans-serif\">Ron</font></p>\n        </div>\n      </div>\n      <font color=\"#888888\"\n        ><span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a href=\"http://www.joincaddy.com/\" target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div>\n        <div></div\n      ></font>\n    </div>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4032,
+        464
+      ],
+      "id": "f5953ac5-1b2a-44dd-9826-cacc6a690cd1",
+      "name": "Send a message4",
+      "webhookId": "b6eb0d88-0136-42fa-ad3d-faed8670ed32",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "4. Test Phase",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Loop Over Items').first().json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3360,
+        464
+      ],
+      "id": "94dcc3de-5c9d-4bd6-94f5-a23227d31512",
+      "name": "Search files and folders9",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Caddy Test Phase Overview",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3584,
+        464
+      ],
+      "id": "4855895a-7ee6-4de3-b555-27445ad11674",
+      "name": "Search files and folders10",
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Test Phase - Bingo Card",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Search files and folders9').item.json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3808,
+        464
+      ],
+      "id": "db39ce0e-7b38-4fbc-ab04-26609c176cd4",
+      "name": "Search files and folders11",
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Get row(s)').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "={{ $('Get row(s)').item.json.steps_completed+\",\"+$('Code in JavaScript').item.json.lastStep }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4256,
+        464
+      ],
+      "id": "b870cf81-703b-4bc5-bbc5-8b75b838aecf",
+      "name": "Update row(s)4"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "=Welcome to Caddy Launch Phase, Team {{ $('Get row(s)').item.json.client_name }}!",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        <div>\n          <div dir=\"ltr\">\n            <div>\n              <div>\n                Hi Team {{ $('Get row(s)').item.json.client_name }},<br /><br />We're\n                in the final stretch!\n              </div>\n              <div><br /></div>\n              <div>\n                Here are the&nbsp;<b><u>3 action items</u></b\n                >&nbsp;(to be completed in sequence) for next steps:\n              </div>\n              <div>\n                <ol>\n                  <li style=\"margin-left: 15px\">\n                    Watch the&nbsp;<a\n                      href=\"https://drive.google.com/file/d/{{ $json.id }}/view?usp=sharing\"\n                      target=\"_blank\"\n                      >Inventory Upload Tutorial</a\n                    >\n                  </li>\n                  <li style=\"margin-left: 15px\">\n                    Complete your&nbsp;<a\n                      href=\"https://docs.google.com/spreadsheets/d/{{ $('Search files and folders13').item.json.id }}/edit?usp=sharing\"\n                      target=\"_blank\"\n                      >Inventory Upload Template</a\n                    >&nbsp;<span style=\"background-color: rgb(255, 255, 0)\"\n                      >(<b>Note:</b>&nbsp;please include all existing\n                      lot/product #'s associated with your\n                      existing&nbsp;inventory&nbsp;on-hand)</span\n                    >\n                  </li>\n                  <li style=\"margin-left: 15px\">\n                    Notify us once completed so our team can review and\n                    then&nbsp;upload&nbsp;into your environment\n                  </li>\n                </ol>\n                <div>\n                  Once all 3 action items are completed, we will have officially\n                  gone live.&nbsp;\n                </div>\n                <div><br />We're almost there, keep up the great work!</div>\n              </div>\n            </div>\n          </div>\n        </div>\n        <font color=\"#888888\"\n          ><font color=\"#888888\"\n            ><div>\n              <div dir=\"ltr\">\n                <div>\n                  <div><br /></div>\n                  <div>Ron</div>\n                </div>\n              </div>\n            </div></font\n          ></font\n        >\n      </div>\n      <font color=\"#888888\"\n        ><div><br /></div>\n        <span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a href=\"http://www.joincaddy.com/\" target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div></font\n      >\n    </div>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4032,
+        656
+      ],
+      "id": "8677a2aa-52a3-4d65-ad2d-e5a1553c1d03",
+      "name": "Send a message5",
+      "webhookId": "83c23659-9084-4f15-8a83-e17449586745",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "5. Launch Phase",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Loop Over Items').first().json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3360,
+        656
+      ],
+      "id": "70510928-2637-4672-a848-8db70fa9cf73",
+      "name": "Search files and folders12",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Inventory Upload - Template",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3584,
+        656
+      ],
+      "id": "3f58d180-0a75-4092-a3fa-6d0229075675",
+      "name": "Search files and folders13",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Inventory Upload Tutorial",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Search files and folders12').item.json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3808,
+        656
+      ],
+      "id": "2c4d1920-d8a4-4fb8-ae90-3677d2c01c34",
+      "name": "Search files and folders14",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Get row(s)').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "={{ $('Get row(s)').item.json.steps_completed+\",\"+$('Code in JavaScript').item.json.lastStep }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4256,
+        656
+      ],
+      "id": "65e06a1b-0023-4262-8990-b22d4f2fe2fb",
+      "name": "Update row(s)5"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "=Team {{ $('Get row(s)').item.json.client_name }}, you're now live on Caddy!",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        <div style=\"display: flex;\">\n          Congratulations Team {{ $('Get row(s)').item.json.client_name }}!&nbsp;<img\n            data-emoji=\"🎉\"\n            class=\"an1 CToWUd\"\n            alt=\"🎉\"\n            aria-label=\"🎉\"\n            draggable=\"false\"\n            style=\"height: 20px;\"\n            src=\"https://fonts.gstatic.com/s/e/notoemoji/16.0/1f389/72.png\"\n            loading=\"lazy\"\n            data-bit=\"iit\"\n          />\n        </div>\n        <div><br /></div>\n        <div>\n          We did it.<br /><br />The inventory count has been uploaded so we're\n          now officially up and running.<br /><br />This was all hands on deck\n          and I deeply appreciate the effort everybody put into achieving this\n          milestone.\n        </div>\n        <div><br /></div>\n        <div>Gabrielle will help schedule our first quarterly check-in.</div>\n        <div><br /></div>\n        <div>Gabrielle, {{ $('Get row(s)').item.json.client_name }} is based in {{ ($(\"HTTP Request7\")?.first()?.json?.properties?.hs_timezone?.value ?? \"\").split(\"_slash_\").map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(\"/\"); }}.</div>\n        <div><br /></div>\n        <div>\n          Excited to build and grow together!<font color=\"#888888\"\n            ><font color=\"#888888\"\n              ><font color=\"#888888\"\n                ><font color=\"#888888\"><br /><br />Ron</font></font\n              ></font\n            ></font\n          >\n        </div>\n      </div>\n      <font color=\"#888888\"\n        ><div><br /></div>\n        <span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a href=\"http://www.joincaddy.com/\" target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div>\n        <div></div\n      ></font>\n    </div>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3584,
+        1040
+      ],
+      "id": "f5b4c5b6-5ae8-4241-b895-fb255918ca9d",
+      "name": "Send a message6",
+      "webhookId": "94d501d3-ec37-4f6c-80d6-8064df10ba84",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Get row(s)').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "={{ $('Get row(s)').item.json.steps_completed+\",\"+$('Code in JavaScript').item.json.lastStep }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3808,
+        1040
+      ],
+      "id": "757ba3c5-3c7c-476a-b898-82c8b4f76102",
+      "name": "Update row(s)6"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "workspace": "1209182518219644",
+        "searchTaskProperties": {
+          "text": "={{ $('Get row(s)').item.json.client_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        4480,
+        272
+      ],
+      "id": "38b4d41f-7389-418e-a57c-f76757f5ebc4",
+      "name": "Search a task",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://app.asana.com/api/1.0/projects/1209185331326117/sections",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        -368
+      ],
+      "id": "018fcb95-907f-4e2e-9c25-e649e4665380",
+      "name": "HTTP Request1",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YH3hzKIDeUa9wjB3",
+          "mode": "list",
+          "cachedResultName": "environment_variables",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YH3hzKIDeUa9wjB3"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "keyValue": "build_section"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4704,
+        272
+      ],
+      "id": "9be567db-a978-4a72-905e-55a5a8e57d62",
+      "name": "Get row(s)1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://app.asana.com/api/1.0/sections/{{ $json.value }}/addTask",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\" : {\n    \"task\": {{ $('Search a task').item.json.gid?.toJsonString() }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4928,
+        272
+      ],
+      "id": "76bc18df-7bd5-4ee0-9256-3b476c3b9446",
+      "name": "HTTP Request2",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YH3hzKIDeUa9wjB3",
+          "mode": "list",
+          "cachedResultName": "environment_variables",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YH3hzKIDeUa9wjB3"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "keyValue": "train_section"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4032,
+        848
+      ],
+      "id": "c4366b37-0669-4886-9bd6-1f0df544097e",
+      "name": "Get row(s)2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://app.asana.com/api/1.0/sections/{{ $json.value }}/addTask",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\" : {\n    \"task\": {{ $('Search a task2').item.json.gid?.toJsonString() }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4256,
+        848
+      ],
+      "id": "3467bbb2-35bb-4957-8ed4-2dfdf34aebfa",
+      "name": "HTTP Request3",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YH3hzKIDeUa9wjB3",
+          "mode": "list",
+          "cachedResultName": "environment_variables",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YH3hzKIDeUa9wjB3"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "keyValue": "test_section"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4704,
+        464
+      ],
+      "id": "cdbc238e-f853-41a3-8c92-4e34f80ef542",
+      "name": "Get row(s)3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://app.asana.com/api/1.0/sections/{{ $json.value }}/addTask",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\" : {\n    \"task\": {{ $('Search a task3').item.json.gid?.toJsonString() }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4928,
+        464
+      ],
+      "id": "81e40955-0f6c-4fa5-83ba-4d69e4575a68",
+      "name": "HTTP Request4",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YH3hzKIDeUa9wjB3",
+          "mode": "list",
+          "cachedResultName": "environment_variables",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YH3hzKIDeUa9wjB3"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "keyValue": "launch_section"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4704,
+        656
+      ],
+      "id": "2aa19343-4dcf-4748-a49c-126e88e3f759",
+      "name": "Get row(s)4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://app.asana.com/api/1.0/sections/{{ $json.value }}/addTask",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\" : {\n    \"task\":{{ $('Search a task4').item.json.gid?.toJsonString() }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4928,
+        656
+      ],
+      "id": "dcd372fd-2f5e-4153-979c-14a6d1022d41",
+      "name": "HTTP Request5",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"email\",\n          \"operator\": \"EQ\",\n          \"value\": \"vincesmarketfoods@gmail.com\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        -368
+      ],
+      "id": "2509df12-a8f3-4cec-a487-7662edf13444",
+      "name": "HTTP Request6",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        },
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "workspace": "1209182518219644",
+        "searchTaskProperties": {
+          "text": "Ron Leung"
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -144
+      ],
+      "id": "52d74f16-ae12-44fc-88d1-8ae4b4d13e73",
+      "name": "Search a task1",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "workspace": "1209182518219644",
+        "searchTaskProperties": {
+          "text": "={{ $('Get row(s)').item.json.client_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        3808,
+        848
+      ],
+      "id": "ada535f8-ffc0-4574-b0f7-9f94667854aa",
+      "name": "Search a task2",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "workspace": "1209182518219644",
+        "searchTaskProperties": {
+          "text": "={{ $('Get row(s)').item.json.client_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        4480,
+        464
+      ],
+      "id": "667b55eb-b3b5-4bd2-952a-9d504ff76120",
+      "name": "Search a task3",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "workspace": "1209182518219644",
+        "searchTaskProperties": {
+          "text": "={{ $('Get row(s)').item.json.client_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        4480,
+        656
+      ],
+      "id": "e965d247-bb4d-4e74-9f6a-f0f68d264253",
+      "name": "Search a task4",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Presets Upload Tutorial (Part I)",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Search files and folders3').item.json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3808,
+        272
+      ],
+      "id": "800b5f1b-3b5e-4fd0-9659-5d3606fda551",
+      "name": "Search files and folders8",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.hubapi.com/contacts/v1/contact/email/{{ $('Get row(s)').item.json.client_email }}/profile",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3360,
+        1040
+      ],
+      "id": "b5a279b9-53b0-46cb-b67c-dbb73dcf710e",
+      "name": "HTTP Request7",
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a3236c02-bd3f-4c0a-ad54-4b6f2d9c217e",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        416
+      ],
+      "id": "6ae46e2b-6886-44c3-8603-8108d765705c",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "705a00e9-0418-4483-8d5d-2b5e2e63ec3d",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        416
+      ],
+      "id": "7f972536-ee90-4fe4-abcd-2c044682ee26",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YH3hzKIDeUa9wjB3",
+          "mode": "list",
+          "cachedResultName": "environment_variables",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YH3hzKIDeUa9wjB3"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "keyValue": "active"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4256,
+        1040
+      ],
+      "id": "2cf592fe-c1d3-4c67-9e2b-9814d48c06a7",
+      "name": "Get row(s)5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://app.asana.com/api/1.0/sections/{{ $json.value }}/addTask",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"data\" : {\n    \"task\":{{ $('Search a task5').item.json.gid?.toJsonString() }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4480,
+        1040
+      ],
+      "id": "04993cd0-5138-4e93-92d5-1846e0e8e412",
+      "name": "HTTP Request8",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "workspace": "1209182518219644",
+        "searchTaskProperties": {
+          "text": "={{ $('Get row(s)').item.json.client_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        4032,
+        1040
+      ],
+      "id": "adca3e4e-2913-4ed7-8f4b-166028721f9b",
+      "name": "Search a task5",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/contacts/v1/contact/email/info@journeycraft.travel/profile",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        -368
+      ],
+      "id": "7014e368-e88d-4284-8937-566eecf3c382",
+      "name": "HTTP Request9",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        },
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d8b05bc4-10b0-4b0a-95c3-c3e514c03472",
+              "leftValue": "={{ $(\"HTTP Request9\").first().json.properties.hs_timezone.value }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        -368
+      ],
+      "id": "d94d45a1-b4bf-45b0-b055-8ac32e32c673",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "2. Active Clients",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4704,
+        1040
+      ],
+      "id": "46313795-0d22-426a-924f-40a83228a1d2",
+      "name": "Find 'Active Clients' Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "1. Clients in Onboarding",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4928,
+        1040
+      ],
+      "id": "225869c2-dc01-4a49-a5be-36aadc589162",
+      "name": "Search files and folders16",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}?addParents={{ $('Find \\'Active Clients\\' Folder').item.json.id }}&removeParents={{ $('Search files and folders16').item.json.id }}&supportsAllDrives=true",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5376,
+        1088
+      ],
+      "id": "bf99a8c6-496c-4532-9105-abe7fdc28458",
+      "name": "HTTP Request10",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Nexora ",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        5152,
+        1040
+      ],
+      "id": "76524eba-1291-4893-8b7f-66574ef881fd",
+      "name": "Search files and folders15",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://app.joincaddy.com/api/v1/ai/companies",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        672,
+        -368
+      ],
+      "id": "1b6c12b4-d0cc-4228-bc8f-d714fab0d899",
+      "name": "HTTP Request11",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ng-xgy9RbY4Ud1oc7UUfdH6FT8w7xqoGW0NRvg22eTs",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 519158975,
+          "mode": "list",
+          "cachedResultName": "Preset Sheet - Do Not Edit",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ng-xgy9RbY4Ud1oc7UUfdH6FT8w7xqoGW0NRvg22eTs/edit#gid=519158975"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Raw Materials",
+              "displayName": "Raw Materials",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Packaging Materials",
+              "displayName": "Packaging Materials",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Batches",
+              "displayName": "Batches",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Final Products",
+              "displayName": "Final Products",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Suppliers",
+              "displayName": "Suppliers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Facility",
+              "displayName": "Facility",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        -368
+      ],
+      "id": "2e2fcea5-4253-4d0c-a8d2-95dedd0c0b53",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TfkPhLdTvPJnYB4g",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://app.joincaddy.com/api/v1/ai/companies",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5152,
+        656
+      ],
+      "id": "19aee7b3-8f58-4ede-9319-14abdcfe2dbb",
+      "name": "Fetch companies from caddy"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7a4da074-958f-4c54-9aca-455e40d16d08",
+              "leftValue": "={{ $json[\"Name\"] }}",
+              "rightValue": "={{ $('Get row(s)').item.json.client_name }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        5376,
+        704
+      ],
+      "id": "39248c47-8962-4259-8fa3-2dd033bc7941",
+      "name": "Filter",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c6601a21-951d-407e-8eb7-73c55175be85",
+              "leftValue": "={{ $json.ID }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5600,
+        704
+      ],
+      "id": "02970d8d-729e-40c4-a941-30b7d1c31648",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "url": "=https://app.joincaddy.com/api/v1/ai/raw-materials?company_id={{ $json.ID  }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5824,
+        704
+      ],
+      "id": "ac0c1d1c-c1f4-407e-bac0-d022b6b96fff",
+      "name": "Fetch Raw Materials",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "=https://app.joincaddy.com/api/v1/ai/packaging-materials?company_id={{ $('If5').item.json.ID }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6048,
+        704
+      ],
+      "id": "e85012ec-386d-48fd-9fdc-f3597372bf0c",
+      "name": "Fetch Packaging Material",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "=https://app.joincaddy.com/api/v1/ai/batch-formulas?company_id={{ $('If5').item.json.ID }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6272,
+        704
+      ],
+      "id": "5bb328e9-2103-42b6-87b5-ca73148953d6",
+      "name": "Fetch Batches",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "=https://app.joincaddy.com/api/v1/ai/finished-products?company_id={{ $('If5').item.json.ID }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6496,
+        704
+      ],
+      "id": "102b4fb8-7074-487f-aef3-ebeb86da6187",
+      "name": "Fetch Final Products",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "=https://app.joincaddy.com/api/v1/ai/suppliers?company_id={{ $('If5').item.json.ID }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6720,
+        704
+      ],
+      "id": "20d5051c-dfd6-4a72-9605-46bd9108a052",
+      "name": "Fetch Suppliers",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "=https://app.joincaddy.com/api/v1/ai/facilities?company_id={{ $('If5').item.json.ID }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6944,
+        704
+      ],
+      "id": "d4b3eaa2-0054-401b-9c34-3bb4f05dc15e",
+      "name": "Fetch Facilities",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "5. Launch Phase",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Loop Over Items').first().json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        7168,
+        704
+      ],
+      "id": "2d053b1b-9085-4498-824d-92b0262a2404",
+      "name": "Search files and folders17",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Inventory Upload - Template",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        7392,
+        704
+      ],
+      "id": "b8cb8ff7-d439-40a8-b76d-2d2f9391ecf5",
+      "name": "Search files and folders18",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawMaterials = $(\"Fetch Raw Materials\").all();\nconst packagingMaterials = $(\"Fetch Packaging Material\").all();\nconst batches = $(\"Fetch Batches\").all();\nconst finalProducts = $(\"Fetch Final Products\").all();\nconst suppliers = $(\"Fetch Suppliers\").all();\nconst facilities = $(\"Fetch Facilities\").all();\n\nconst data = {\n  rawMaterials: $(\"Fetch Raw Materials\").all().length,\n  packagingMaterials: $(\"Fetch Packaging Material\").all().length,\n  batches: $(\"Fetch Batches\").all().length,\n  finalProducts: $(\"Fetch Final Products\").all().length,\n  suppliers: $(\"Fetch Suppliers\").all().length,\n  facilities: $(\"Fetch Facilities\").all().length,\n};\n\nconsole.log(data)\n\nconst result = Object.entries(data).reduce(\n  (max, [key, value]) =>\n    value > max.length\n      ? { name: key, length: value }\n      : max,\n  { name: null, length: 0 }\n);\n\nconsole.log(result);\n\nlet outputs = [];\n\nfor (let index = 0; index < result.length; index++) {\n  const rawMaterial = data.rawMaterials > index ? rawMaterials[index] : null;\n  const packagingMaterial = data.packagingMaterials > index ? packagingMaterials[index] : null;\n  const batch = data.batches > index ? batches[index] : null;\n  const finalProduct = data.finalProducts > index ? finalProducts[index] : null;\n  const supplier = data.suppliers > index ? suppliers[index] : null;\n  const facility = data.facilities > index ? facilities[index] : null;\n  outputs.push({\n    \"Raw Materials\": rawMaterial?.json?.name ?? \"\",\n    \"Raw Material ID\" : rawMaterial?.json?.id ?? \"\",\n    \"Packaging Materials\": packagingMaterial?.json?.name ?? \"\",\n    \"Packaging Material ID\": packagingMaterial?.json?.id ?? \"\",\n    \"Batches\": batch?.json?.name ?? \"\",\n    \"Batch ID\": batch?.json?.id ?? \"\",\n    \"Final Products\": finalProduct?.json?.name ?? \"\",\n    \"Final Product ID\": finalProduct?.json?.id ?? \"\",\n    \"Suppliers\": supplier?.json?.name ?? \"\",\n    \"Supplier ID\": supplier?.json?.id ?? \"\",\n    \"Facility\": facility?.json?.name ?? \"\",\n    \"Facility ID\": facility?.json?.id ?? \"\",\n  });\n}\n\nconsole.log(outputs);\n\nreturn outputs.map(e=> {\n  return { json: e }\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7616,
+        704
+      ],
+      "id": "e361130f-b2c0-4ba3-81e2-4e4cb32d2bcb",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Search files and folders18').first().json.id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 519158975,
+          "mode": "list",
+          "cachedResultName": "Preset Sheet - Do Not Edit",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ng-xgy9RbY4Ud1oc7UUfdH6FT8w7xqoGW0NRvg22eTs/edit#gid=519158975"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Raw Materials": "={{ $json['Raw Materials'] }}",
+            "Raw Material ID": "={{ $json['Raw Material ID'] }}",
+            "Packaging Materials": "={{ $json['Packaging Materials'] }}",
+            "Packaging Material ID": "={{ $json['Packaging Material ID'] }}",
+            "Batches": "={{ $json.Batches }}",
+            "Batch ID": "={{ $json['Batch ID'] }}",
+            "Final Products": "={{ $json['Final Products'] }}",
+            "Final Product ID": "={{ $json['Final Product ID'] }}",
+            "Suppliers": "={{ $json.Suppliers }}",
+            "Supplier ID": "={{ $json['Supplier ID'] }}",
+            "Facility": "={{ $json.Facility }}",
+            "Facility ID": "={{ $json['Facility ID'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Raw Materials",
+              "displayName": "Raw Materials",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Raw Material ID",
+              "displayName": "Raw Material ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Packaging Materials",
+              "displayName": "Packaging Materials",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Packaging Material ID",
+              "displayName": "Packaging Material ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Batches",
+              "displayName": "Batches",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Batch ID",
+              "displayName": "Batch ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Final Products",
+              "displayName": "Final Products",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Final Product ID",
+              "displayName": "Final Product ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Suppliers",
+              "displayName": "Suppliers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Supplier ID",
+              "displayName": "Supplier ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Facility",
+              "displayName": "Facility",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Facility ID",
+              "displayName": "Facility ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        7840,
+        704
+      ],
+      "id": "63965097-5db4-40c0-8d14-2d676f0151ee",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TfkPhLdTvPJnYB4g",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/search\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n          \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"Caddy Systems Inc.\"\n        }\n      ]\n    }\n  ],\n  \"limit\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5600,
+        1088
+      ],
+      "id": "7dfbf0c9-153c-4d92-bec7-72071e36fb4c",
+      "name": "HTTP Request12",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"onboarding_status\": \"Live\",\n    \"onboarding_phase\": \"Active\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5824,
+        1088
+      ],
+      "id": "90906165-13ab-489f-804c-76305906509f",
+      "name": "HTTP Request13",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/search\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n          \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"{{ $('Get row(s)').item.json.client_name }}\"\n        }\n      ]\n    }\n  ],\n  \"limit\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5152,
+        272
+      ],
+      "id": "9364b13d-0f04-472a-b6b7-770d2b458508",
+      "name": "HTTP Request16",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"onboarding_status\": \"In Progress\",\n    \"onboarding_phase\": \"Build\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5376,
+        320
+      ],
+      "id": "fa86b4c5-5fbb-4e1f-90e1-4c6ef73befe1",
+      "name": "HTTP Request17",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/search\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n          \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"{{ $('Get row(s)').item.json.client_name }}\"\n        }\n      ]\n    }\n  ],\n  \"limit\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5152,
+        464
+      ],
+      "id": "f911a1bf-2d27-410e-bda5-7a05f9fef6e3",
+      "name": "HTTP Request18",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"onboarding_status\": \"In Progress\",\n    \"onboarding_phase\": \"Test\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        5376,
+        512
+      ],
+      "id": "402a66ab-02a2-4f6c-9b58-7b9d3236a7ff",
+      "name": "HTTP Request19",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/search\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n          \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"{{ $('Get row(s)').item.json.client_name }}\"\n        }\n      ]\n    }\n  ],\n  \"limit\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        8064,
+        704
+      ],
+      "id": "cf9d8716-673c-4c24-b6c7-3b75ab8785b5",
+      "name": "HTTP Request20",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"onboarding_status\": \"Completed\",\n    \"onboarding_phase\": \"Launch\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        8288,
+        1200
+      ],
+      "id": "aba36618-e50d-441d-a02f-cf7c8029ef0c",
+      "name": "HTTP Request21",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/search\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n          \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"{{ $('Get row(s)').item.json.client_name }}\"\n        }\n      ]\n    }\n  ],\n  \"limit\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4480,
+        848
+      ],
+      "id": "9a7628a5-0224-4213-ab81-6fb247c70221",
+      "name": "HTTP Request22",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"onboarding_status\": \"In Progress\",\n    \"onboarding_phase\": \"Training\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4704,
+        848
+      ],
+      "id": "4e2c3b7f-5df7-4fea-b188-ea2e31c11077",
+      "name": "HTTP Request23",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders2": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search files and folders5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search files and folders9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search files and folders12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)": {
+      "main": [
+        [
+          {
+            "node": "Search a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders3": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders4": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders5": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders6": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders7": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)2": {
+      "main": [
+        [
+          {
+            "node": "Search a task2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message3": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders9": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders10": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders11": {
+      "main": [
+        [
+          {
+            "node": "Send a message4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message4": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)4": {
+      "main": [
+        [
+          {
+            "node": "Search a task3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders12": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders13": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders14": {
+      "main": [
+        [
+          {
+            "node": "Send a message5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message5": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)5": {
+      "main": [
+        [
+          {
+            "node": "Search a task4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message6": {
+      "main": [
+        [
+          {
+            "node": "Update row(s)6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)6": {
+      "main": [
+        [
+          {
+            "node": "Search a task5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search a task": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request22",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request5": {
+      "main": [
+        [
+          {
+            "node": "Fetch companies from caddy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search a task1": {
+      "main": [
+        []
+      ]
+    },
+    "Search a task2": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search a task3": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search a task4": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders8": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request7": {
+      "main": [
+        [
+          {
+            "node": "Send a message6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)5": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request8": {
+      "main": [
+        [
+          {
+            "node": "Find 'Active Clients' Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search a task5": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request9": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find 'Active Clients' Folder": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders16": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request10": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders15": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request11": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch companies from caddy": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Fetch Raw Materials",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Raw Materials": {
+      "main": [
+        [
+          {
+            "node": "Fetch Packaging Material",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Packaging Material": {
+      "main": [
+        [
+          {
+            "node": "Fetch Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Batches": {
+      "main": [
+        [
+          {
+            "node": "Fetch Final Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Final Products": {
+      "main": [
+        [
+          {
+            "node": "Fetch Suppliers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Suppliers": {
+      "main": [
+        [
+          {
+            "node": "Fetch Facilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Facilities": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders17": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders18": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request12": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request16": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request18": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request20": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request21",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request21": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request22": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request23",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request23": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request13": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request17": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request19": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "68625878-a64b-485e-aebf-210e42fff005",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ed9054be5a60a40f9bc4e3ee3b932937418f14706eb193ff214dded3eb350b8"
+  },
+  "id": "UHK1v5RyaDD3byt9",
+  "tags": [
+    {
+      "updatedAt": "2025-10-28T12:46:35.088Z",
+      "createdAt": "2025-10-28T12:46:12.899Z",
+      "id": "eO8LIA5wyioZDc2h",
+      "name": "step2"
+    }
+  ]
+}

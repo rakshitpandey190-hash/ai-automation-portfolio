@@ -1,0 +1,66 @@
+{
+  "name": "Error Notifier",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        448,
+        32
+      ],
+      "id": "2ce4cc0a-f7de-4083-a54d-e9a8e98af289",
+      "name": "Error Trigger",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "sendTo": "rakshit.siliconstream@gmail.com",
+        "subject": "=🚨 Workflow Error Alert - {{$node[\"Error Trigger\"].json[\"workflow\"][\"name\"]}} Failed\n",
+        "message": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Workflow Error Notification</title>\n    <style>\n        /* Base Styles */\n        body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }\n        \n        /* Layout */\n        .wrapper { width: 100%; background-color: #f4f7f6; padding-bottom: 40px; }\n        .main-content { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }\n        \n        /* Header */\n        .header { background-color: #1e293b; padding: 30px; text-align: center; border-bottom: 4px solid #ef4444; }\n        .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; }\n        .header p { color: #94a3b8; margin: 5px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }\n\n        /* Content */\n        .content-section { padding: 40px; }\n        .intro-text { color: #334155; font-size: 16px; line-height: 1.6; margin-bottom: 30px; }\n        \n        /* Data Layout (Div based) */\n        .data-container { width: 100%; margin-bottom: 25px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }\n        .data-header { background-color: #f8fafc; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; }\n        .data-header h3 { margin: 0; font-size: 14px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }\n        \n        .data-row { \n            display: flex; \n            padding: 12px 20px; \n            border-bottom: 1px solid #f1f5f9; \n            font-size: 14px; \n        }\n        .data-row:last-child { border-bottom: none; }\n        .label { color: #64748b; font-weight: 600; width: 35%; flex-shrink: 0; }\n        .value { color: #0f172a; flex-grow: 1; word-break: break-word; }\n        \n        /* Error Specifics */\n        .error-block { background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 20px; }\n        .error-title { color: #991b1b; font-weight: 700; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; }\n        \n        .error-info-row { display: flex; margin-bottom: 8px; font-size: 13px; }\n        .error-label { color: #7f1d1d; font-weight: 600; width: 100px; flex-shrink: 0; }\n        .error-value { color: #111827; flex-grow: 1; }\n\n        .code-block { background-color: #fff; border: 1px solid #fee2e2; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: #dc2626; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin-top: 8px; }\n\n        /* Footer */\n        .footer { background-color: #f1f5f9; padding: 30px; text-align: center; color: #94a3b8; font-size: 12px; }\n        \n        /* Link styles */\n        a { color: #2563eb; text-decoration: none; font-weight: 600; }\n        a:hover { text-decoration: underline; }\n    </style>\n</head>\n<body>\n\n    <div class=\"wrapper\">\n        <br>\n        <div class=\"main-content\">\n            \n            <!-- Header -->\n            <div class=\"header\">\n                <h1>⚠️ Workflow Execution Failed</h1>\n                <p>System Alert Notification</p>\n            </div>\n\n            <div class=\"content-section\">\n                <!-- Intro -->\n                <div class=\"intro-text\">\n                    An error occurred during the execution of an automated workflow. Please review the diagnostic details below.\n                </div>\n\n                <!-- Workflow Details Card -->\n                <div class=\"data-container\">\n                    <div class=\"data-header\">\n                        <h3>Workflow Information</h3>\n                    </div>\n                    <!-- Row 1 -->\n                    <div class=\"data-row\">\n                        <div class=\"label\">Workflow Name</div>\n                        <div class=\"value\">{{$node[\"Error Trigger\"].json[\"workflow\"][\"name\"]}}</div>\n                    </div>\n                    <!-- Row 2 -->\n                    <div class=\"data-row\">\n                        <div class=\"label\">Workflow ID</div>\n                        <div class=\"value\">{{$node[\"Error Trigger\"].json[\"workflow\"][\"id\"]}}</div>\n                    </div>\n                    <!-- Row 3 -->\n                    <div class=\"data-row\">\n                        <div class=\"label\">Execution ID</div>\n                        <div class=\"value\">{{$node[\"Error Trigger\"].json[\"execution\"][\"id\"]}}</div>\n                    </div>\n                    <!-- Row 4 -->\n                    <div class=\"data-row\">\n                        <div class=\"label\">Timestamp</div>\n                        <div class=\"value\">{{$now.toISO()}}</div>\n                    </div>\n                    <!-- Row 5 -->\n                    <div class=\"data-row\">\n                        <div class=\"label\">Retry Count</div>\n                        <div class=\"value\">{{$node[\"Error Trigger\"].json[\"execution\"][\"retryOf\"] || \"0\"}}</div>\n                    </div>\n                    <!-- Row 6 -->\n                    <div class=\"data-row\">\n                        <div class=\"label\">Action</div>\n                        <div class=\"value\"><a href=\"{{$node[\"Error Trigger\"].json[\"execution\"][\"url\"]}}\">View Execution Log &rarr;</a></div>\n                    </div>\n                </div>\n\n                <!-- Error Details Card -->\n                <div class=\"error-block\">\n                    <div class=\"error-title\">\n                        🚫 Critical Error\n                    </div>\n                    \n                    <div class=\"error-info-row\">\n                        <div class=\"error-label\">Failed Node:</div>\n                        <div class=\"error-value\">{{$node[\"Error Trigger\"].json.execution.lastNodeExecuted}}</div>\n                    </div>\n                    \n                    <div class=\"error-info-row\">\n                        <div class=\"error-label\">Message:</div>\n                        <div class=\"error-value\">{{$node[\"Error Trigger\"].json.execution.error.message}}</div>\n                    </div>\n\n                    <div style=\"font-size: 12px; font-weight: 600; color: #7f1d1d; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase;\">Stack Trace</div>\n                    <div class=\"code-block\">\n{{$node[\"Error Trigger\"].json.execution.error.stack}}\n                    </div>\n                </div>\n\n            </div>\n\n            <!-- Footer -->\n            <div class=\"footer\">\n                Elite Security Specialists - Automated Workflow System<br>\n                This is a system generated message.\n            </div>\n\n        </div>\n    </div>\n\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        704,
+        32
+      ],
+      "id": "658cd18d-a9b7-4c01-9a4a-fa1548d1f82a",
+      "name": "Gmail",
+      "webhookId": "536f51c0-42f8-4d7d-b8d9-d8438da9b4ce",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aWgAYACuHBF5Ombh",
+          "name": "Gmail account 4"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "e80f38e3-32b9-4238-8b34-0e205d77202a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "090ab597ad25e7a672f4ec6c76059e29c862c56e1bca98bfbd156147928a9c41"
+  },
+  "id": "sBKDvt9PY6dPieSY",
+  "tags": []
+}

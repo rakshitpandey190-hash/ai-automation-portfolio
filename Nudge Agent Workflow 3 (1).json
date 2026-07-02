@@ -1,0 +1,865 @@
+{
+  "name": "Nudge Agent Workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        16
+      ],
+      "id": "a8b0b4a0-a09d-41f6-9444-5d5485c78434",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1C5ntqNaOr9w22sIULEnx2edZlQ9wqO1M",
+            "mode": "list",
+            "cachedResultName": "1. Clients in Onboarding",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1C5ntqNaOr9w22sIULEnx2edZlQ9wqO1M"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        224,
+        16
+      ],
+      "id": "9e529d21-a0ac-40ce-9b62-5b3ccd7e920d",
+      "name": "Search files and folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        16
+      ],
+      "id": "21bcf230-6570-4479-88c2-16e464b0e1a5",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -512
+      ],
+      "id": "33ec9216-8111-40f3-be89-33b065477078"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "1. Kickoff Phase",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Loop Over Items').first().json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1568,
+        -512
+      ],
+      "id": "51639ac8-83b0-4ced-9c38-5bba231e0f20",
+      "name": "Search files and folders1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Implementation Checklist ",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1792,
+        -512
+      ],
+      "id": "fe87f8c5-09d4-49ee-b9f1-1deeae4d6e8b",
+      "name": "Search files and folders2",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}?supportsAllDrives=true&fields=id,name,mimeType",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2016,
+        -512
+      ],
+      "id": "9363304a-8dbf-466e-9d73-764477b173b4",
+      "name": "HTTP Request",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1af0e114-bff0-4219-957a-d38ea636fc33",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "application/vnd.google-apps.spreadsheet",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        -512
+      ],
+      "id": "48ac32b5-e222-4893-ac42-406fe8c9d673",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_name",
+              "keyValue": "={{ $('Loop Over Items').item.json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -512
+      ],
+      "id": "f2da3429-c601-489e-a3e6-7aa676811d3d",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Code in JavaScript').first().json.count }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "08ec277f-b4dd-4595-974b-b182e9aa310a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f6085ac4-eccc-4c16-a499-2e263421c8b9",
+                    "leftValue": "={{ $('Code in JavaScript').first().json.count }}",
+                    "rightValue": 10,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e8fe30bb-d030-4b9d-9357-4e9323e05536",
+                    "leftValue": "={{ $('Code in JavaScript').first().json.count }}",
+                    "rightValue": 15,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2912,
+        -528
+      ],
+      "id": "6078f397-6fa8-47ee-9f6f-5e3a56f4db1b",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const startDate = $input.first().json.updatedAt;\nconst endDate = new Date();\nconsole.log(startDate, \"=-=-=-=\", endDate);\nlet count = 0;\n\n  let cur = new Date(startDate);\n  cur.setHours(0, 0, 0, 0);\n\n  const end = new Date(endDate);\n  end.setHours(0, 0, 0, 0);\n\n  while (cur <= end) {\n    const day = cur.getDay();\n    if (day !== 0 && day !== 6) {\n      count++;\n    }\n    cur.setDate(cur.getDate() + 1);\n  }\n\nreturn { count };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -512
+      ],
+      "id": "6632233a-de57-4572-ad7f-69bdf6a65cbb",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2464,
+        -512
+      ],
+      "id": "2419e527-ef7c-40c4-8a94-d7ee4a715c9a",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TfkPhLdTvPJnYB4g",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let count = 1;\nlet key = 2;\nlet groupedData = {}\nlet alltemplateStatusData = {\n  1: true,\n  2: false,\n  3: false,\n  4: false,\n  5: false,\n  6: false,\n  7: false,\n  8: false,\n  9: false,\n}\nlet lastStepData = null;\nfor (const element of $input.all()) {\n  if(count == 1){\n    count +=1;\n    console.log(\"in continue\")\n  }else{\n    console.log(count)\n    if(!(key in groupedData)){\n      groupedData[`${key}`] = [];\n    }\n    console.log(\"after continue\")\n    count +=1;\n    console.log({key, groupedData, \"col_7\": element.json[\"col_7\"]})\n    groupedData[`${key}`].push(element.json)\n    if(element.json['col_6'] == \"\" && element.json['col_6']?.toLowerCase() != \"x\"){\n      console.log(\"in break statement\")\n      lastStepData = element.json;\n      break;\n    }\n  }\n}\nreturn {lastStepData: lastStepData};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        -512
+      ],
+      "id": "558ff2a4-b317-47b1-9f47-9a5223967738",
+      "name": "Code in JavaScript1",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "Caddy Onboarding – Friendly Reminder: Task Now 5 Days Overdue",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        Hi Team\n        {{ $('Get row(s)').first().json.client_name }},\n      </div>\n      <div><br /></div>\n      <div>\n        This is a friendly&nbsp;reminder that the following task is now\n        <b>5 days overdue</b>:\n        {{ $('Code in JavaScript1').item.json.lastStepData['col_2'] }}\n      </div>\n      <div><br /></div>\n      <div>\n        If the task has already been completed, kindly update your&nbsp;<a\n          href=\"https://drive.google.com/file/d/{{ $('HTTP Request').first().json.id }}/view?usp=sharing\"\n          target=\"_blank\"\n          >Implementation Checklist</a\n        >&nbsp;by marking an \"X\" in Column F.\n      </div>\n      <div><br /></div>\n      <div>Best regards,</div>\n      <div>Ron</div>\n        <div><br /></div>\n        <span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a\n                    href=\"https://d13r5V04.na1.hs-sales-engage.com/Ctc/5E+23284/d13r5V04/Jks2-6qcW69sMD-6lZ3pQW1bTJ5w5JsHrcW8zTqd-4CttJpW33vN3l29tfxpW5YrHqp370P8WW8t4K_h5G2pGGV3qmqN1Fbtq_W2Y4Q697rkrZBVb21qs77XXnqW8j2JYG77pBJDW1Dq_9c5-pfcKW1bNBvV7Ysk82W3FrsMR9cnXnZW2-v0XL2ctb4BVLqSQP3PkrnDW38JC9d6VcKLFW4YLNgt5tMyj_W3N6yNx23gqsKW2pVMTW744pybW6TSphJ1-dmg0W57-_674H9jQpf2bZfqC04\"\n                    target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div>\n        <img\n          src=\"https://ci3.googleusercontent.com/meips/ADKq_NYl3ptb4cDeFlBF6QLmGGV4NCGJGjGK9y1jpKfT69LHrF1Dg5eDyDpgscbBaZChNJGhaLGhvtCHzbAIzkGZRyq9Ff21OCdkG212Jn6Q2oPm9j6ZFhrKz-Aa44qugYecGGbTUAzqN7jivlFyYuQzCxAKSULBNXWxgiXjjMUrCf7xNQFphsBg2FfUUA32gmh0N-5aX_g0euC-QIR7KNCxi4WDqM6mwrynsiobmAAWRkqFOUdzqL3Q=s0-d-e1-ft#https://d13r5V04.na1.hs-sales-engage.com/Cto/5E+23284/d13r5V04/R5R8b41MGN65yjsy2fDD4W1SqCq11YZ0sdW1Q4w0X1XmmqtW1GBbTD1T-MMXW1V1C2l3C88mZW21gSXL1S573Sn1S1nZM4W1\"\n          alt=\"\"\n          height=\"1\"\n          width=\"1\"\n          style=\"display: none !important\"\n          class=\"CToWUd\"\n          data-bit=\"iit\" />\n        <div></div>\n        <div\n          id=\"m_3088837515919215984data-hbsasc-v0-9dbad8f4-c4fa-4606-ac38-0b5caa4d9374\"\n        ></div\n    ></div>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3504,
+        -544
+      ],
+      "id": "971667f9-d80f-4491-9d8d-6d1ee3b7061d",
+      "name": "Send a message",
+      "webhookId": "bbffe42a-d34a-4f3e-9854-532d5e950795",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "Caddy Onboarding – Action Required: Task Now 10 Days Overdue",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        <div>\n          Hi Team&nbsp;{{ $('Get row(s)').first().json.client_name }},\n        </div>\n        <div><br /></div>\n        <div>\n          This is a follow-up reminder that the following task is now\n          <strong>10 days overdue</strong> and requires your\n          attention:&nbsp;{{ $('Code in JavaScript1').first().json.lastStepData.col_2 }}\n        </div>\n        <div><br /></div>\n        <div>\n          To get your onboarding timeline back on track, please complete this\n          task as soon as possible.\n        </div>\n        <div><br /></div>\n        <div>\n          If the task has already been completed, kindly update your&nbsp;<a\n            href=\"https://drive.google.com/file/d/{{ $('If').first().json.id }}/view?usp=sharing\"\n            target=\"_blank\"\n            >Implementation Checklist</a\n          >&nbsp;by marking an \"X\" in Column F.\n        </div>\n        <div><br /></div>\n        <div>\n          If you're running into any blockers or need clarification, please let\n          us know. We're here to help keep things moving.\n        </div>\n        <div><br /></div>\n        <div>Best regards,</div>\n        <div>Ron</div>\n      </div>\n      <font color=\"#888888\"\n        ><div><br /></div>\n        <span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div>\n              <font color=\"#000000\">Chief Executive Officer, Caddy</font>\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a\n                    href=\"https://d13r5V04.na1.hs-sales-engage.com/Ctc/5E+23284/d13r5V04/Jks2-6qcW69sMD-6lZ3kNN4-p_pvqXp15W4KRldl4Hyp4rW5r34cH1SRbGHW1xpxCM2S4CvLW3xpXWF1qVJVTW5vZFDy5GS-1nW3txCg01kcsPKW8B14-L1Kz_R2W1TgJVs3BX_2TW8h-rwg4N8d89W22189r9k06mhN4hnXVMpxbRtW6FnCWM1NJh-2W1GL6rH4c3kcgW5wFk9P7fs_BLW3f-5wK7ZMRCnW6-TMDv8BKT2YW5VMVcx2F97_bW3vBqR-2NPyDDW3FXd-m8MdY99f1LQ50-04\"\n                    target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div>\n        <img\n          src=\"https://ci3.googleusercontent.com/meips/ADKq_NZnTuJnsy_b6F9A6S5lCvZ93LH3ZtrVAzdSVU5LTrI9GyGJ290XGEuEe71fCf4YQZlb1uq8vrx-cO5_rENUdWkcQmz2Wx_et-1cN47Dr6VuVynwIKBMPtXYutXjTBrXHhUUnQkKc57rEvL6pfDdV5MJn2y0wMIuT5ua3N2F89_ry8JA2i0j82RIPwVsPHx9kHjaH6L0PrH7TUyIQF2DeGnER76baHg2h4FPx_ctbb8LhKALBV3K=s0-d-e1-ft#https://d13r5V04.na1.hs-sales-engage.com/Cto/5E+23284/d13r5V04/R5R8b41MGN65yjsy2fDrCW24ShhJ3H3vRzW3GHNRX1Xn63sW1GzKD33GGxvWW1QtjNp20XTltW3yNpQG1S573Sn1S1nZM4W1\"\n          alt=\"\"\n          height=\"1\"\n          width=\"1\"\n          style=\"display: none !important\"\n          class=\"CToWUd\"\n          data-bit=\"iit\" />\n        <div></div>\n        <div\n          id=\"m_-6820714628836907021data-hbsasc-v0-ccb2bd48-d1bf-401c-9963-58f6e862d454\"\n        ></div\n      ></font>\n    </div>\n  </body>\n</html>\n",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3136,
+        -448
+      ],
+      "id": "ef64fd45-d026-4320-af42-61e5c07935ab",
+      "name": "Send a message1",
+      "webhookId": "aa7f5b71-bfba-4886-a9b2-d01042b74370",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  [\n    $('Get row(s)').item.json.client_email, \n    $('Get row(s)').item.json.team_emails, \n    \n  ]\n  .filter(email => email && email.trim() !== '')\n  .join(',') \n}}",
+        "subject": "Caddy Onboarding – Urgent: Task Now 15 Days Overdue",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body>\n    <div dir=\"ltr\">\n      <div>\n        Hi Team&nbsp;{{ $('Get row(s)').first().json.client_name }},\n      </div>\n      <div><br /></div>\n      <div>\n        We’re now at <strong>15 days overdue</strong> for the following\n        task:&nbsp;{{ $('Code in JavaScript1').first().json.lastStepData.col_2 }}\n      </div>\n      <div>\n        <p>\n          At this stage, it’s important we address any blockers so we can get your\n          onboarding timeline back on track.\n        </p>\n        <p>\n          To help move this forward, I’d like to propose a\n          <strong>short working session (15 minutes)</strong>. Whether you need\n          clarification, help completing the task, or simply a focused timeblock to\n          get it done, I’m happy to walk through it with you.\n        </p>\n        <p>\n          Gabrielle will follow up with a few available 15-minute time slots from my\n          calendar.<br />\n          Please choose the one that works best for you, and we’ll get it booked.\n        </p>\n        <p>\n          If the task has already been completed, kindly update your&nbsp;<a\n            href=\"https://drive.google.com/file/d/{{ $('HTTP Request').first().json.id }}/view?usp=sharing\"\n            target=\"_blank\"\n            >Implementation Checklist</a\n          >&nbsp;by marking an \"X\" in Column F.\n        </p>\n        <p>Looking forward to helping you get this across the finish line.</p>\n        <p>\n          Best regards,<br />\n          Ron\n        </p>\n      </div>\n      <font color=\"#888888\"\n        ><span class=\"gmail_signature_prefix\">-- </span><br />\n        <div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\">\n          <div dir=\"ltr\">\n            <div>\n              <font color=\"#000000\"><strong>Ron&nbsp;Leung</strong><br /></font>\n            </div>\n            <div><font color=\"#000000\">Chief Executive Officer, Caddy</font></div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\">C:&nbsp;+1.416.305.6148</font></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"\n                  ><a\n                    href=\"\"\n                    target=\"_blank\"\n                    >See Caddy in Action</a\n                  ></font\n                ></span\n              >\n            </div>\n            <div>\n              <span style=\"line-height: 17.6px\"\n                ><font color=\"#000000\"><br /></font\n              ></span>\n            </div>\n            <div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"\n                      ><img\n                        src=\"https://ci3.googleusercontent.com/mail-sig/AIorK4ycCGHasYDe59VAZsP7OmlK3AYe8ED6f2w57rBEEzSZsOhL3z0RQ5pn9l02HEJX6z2PhbbZ1rU\"\n                        width=\"200\"\n                        height=\"47\"\n                        class=\"CToWUd\"\n                        data-bit=\"iit\" /><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><strong\n                    ><font color=\"#000000\"><br /></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"line-height: 17.6px\"\n                  ><b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b\n                  ><span style=\"color: rgb(255, 0, 0)\"\n                    >&nbsp;Mon-Fri, 9:00 AM ET to 6:00 PM ET (Responses may be\n                    delayed outside these hours)</span\n                  ><strong><font color=\"#000000\"></font></strong\n                ></span>\n              </div>\n              <div>\n                <span style=\"color: rgb(0, 0, 0)\"\n                  ><span style=\"font-size: 14.6667px; line-height: 17.6px\"\n                    ><span style=\"color: rgb(80, 0, 80)\"\n                      ><strong><br /></strong></span></span\n                ></span>\n              </div>\n            </div>\n          </div>\n        </div>\n        <img\n          src=\"https://ci3.googleusercontent.com/meips/ADKq_NbKOEVDNuh-i3ZM2gtJ1v3X9-vgi_h2ESnPoCGgnsBs8VmoZHnvwCVYswjCY9JwwqKcsAUIXtqdhJuTEnJw77OQjlcavyW-wb0wPj-Mb-5IAxPU8mNkkj_gZkb43IoQfmzsb_2fOYkbAewkkJNjRbd5WHAS0qHqc-YNtMqSZkzBOdcqvyYwbNlWYXhPHKx7uqd0Qskz4i6sydGTQwg8FsbFQE6XPXiwJeSEy0ABWsg_w-GXm8zK=s0-d-e1-ft#https://d13r5V04.na1.hs-sales-engage.com/Cto/5E+23284/d13r5V04/R5R8b41MGN65yjsy2fDrvW3GHNGF3z7rSgW1--7rr1X0FjCW1Gd3d13GGshqW23f3gv23fthFW3DMBb91S573Sn1S1nZM4W1\"\n          alt=\"\"\n          height=\"1\"\n          width=\"1\"\n          style=\"display: none !important\"\n          class=\"CToWUd\"\n          data-bit=\"iit\" />\n        <div></div>\n        <div\n          id=\"m_1717891694854804735data-hbsasc-v0-9d0caec7-f976-4309-87f5-34cd55491e75\"\n        ></div\n      ></font>\n    </div>\n  </body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3136,
+        -256
+      ],
+      "id": "0b664d8e-e344-44fa-9747-90a866876c24",
+      "name": "Send a message2",
+      "webhookId": "b236dbad-d5ae-4ffe-ad89-501b4bc0a434",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0822KSLTK2",
+          "mode": "list",
+          "cachedResultName": "implementations"
+        },
+        "text": "={{ $('Get row(s)').first().json.client_name }} is 10 days overdue for {{ $('Code in JavaScript1').item.json.lastStepData.col_2 }}. A follow up email has been sent.",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        3344,
+        -448
+      ],
+      "id": "69d3eb8e-aafb-4f0c-870a-219783bd5a0c",
+      "name": "Send a message3",
+      "webhookId": "069e6f8f-f361-4c20-bd8b-cd8bb61139e8",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "nffr3F4e1ZEp8q9L",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eeb4fcb4-a7a1-4dab-ab50-4703daa137f9",
+              "leftValue": "={{ $json && !$json?.steps_completed?.includes(\"8\") }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        -512
+      ],
+      "id": "5072c10a-2687-4531-9bfb-2d2253f1bebe",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0822KSLTK2",
+          "mode": "list",
+          "cachedResultName": "implementations"
+        },
+        "text": "={{ $('Get row(s)').first().json.client_name }} is 15 days overdue for {{ $('Code in JavaScript1').item.json.lastStepData.col_2 }}. A follow up email has been sent.",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        3824,
+        -256
+      ],
+      "id": "a20fa112-1f6e-4100-b13c-1cdd2542860e",
+      "name": "Send a message4",
+      "webhookId": "f191ebef-c197-464c-bbc8-e6208be1317c",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "nffr3F4e1ZEp8q9L",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/search\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n          \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"{{ $('Get row(s)').first().json.client_name }}\"\n        }\n      ]\n    }\n  ],\n  \"limit\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3360,
+        -256
+      ],
+      "id": "639dc175-4499-4c62-b52e-ccf5198f1ca8",
+      "name": "HTTP Request5",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"onboarding_status\": \"At Risk\",\n    \"caddy_lifecycle_stage\": \"Onboarding – At Risk\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3584,
+        -256
+      ],
+      "id": "b72d0275-ff0d-4cf0-ad5b-6e25b1b1068c",
+      "name": "HTTP Request6",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders1": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message4": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request5": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "Send a message4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "3a06f4d1-7a32-45a3-be60-f29eed7e5ebd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ed9054be5a60a40f9bc4e3ee3b932937418f14706eb193ff214dded3eb350b8"
+  },
+  "id": "ZhiSSLEScpFqXBqS",
+  "tags": [
+    {
+      "updatedAt": "2025-11-25T12:56:06.813Z",
+      "createdAt": "2025-11-25T12:56:06.813Z",
+      "id": "4nBdMdAgfFlnpq8W",
+      "name": "step3"
+    }
+  ]
+}

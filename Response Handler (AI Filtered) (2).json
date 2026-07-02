@@ -1,0 +1,321 @@
+{
+  "name": "Response Handler (AI Filtered)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "3f650ddb-416c-4652-ad2c-71dbed18d610",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        1088
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "subject:\"Checking in on your\" is:unread"
+        }
+      },
+      "id": "91a53e06-f511-4f73-aad6-03aef0884072",
+      "name": "Listen for Replies1",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        864
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const subject = $input.item.json.subject || '';\nconst body = $input.item.json.snippet || '';\nconst from = $input.item.json.from || '';\n\n// 1. Extract Company Name\nconst match = subject.match(/Checking in on your (.+) account/);\nconst companyName = match ? match[1] : 'Unknown';\n\nreturn {\n  json: {\n    company_name: companyName,\n    reply_text: body,\n    sender: from,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "702c9eaa-a030-46e7-b0b1-a29976f3deef",
+      "name": "Extract Meta Data1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Customer Success Email Analyzer.\n\nInput Email:\nFrom: {{ $json.sender }}\nBody: {{ $json.reply_text }}\n\n**TASK:**\nDetermine if this email is RELEVANT to Churn Risk, Account Health, or requires Human Intervention.\n\n**Relevance Rules:**\n- **TRUE:** Mentions cancellation, pricing issues, bugs, booking a meeting, specific complaints, or positive feedback.\n- **FALSE:** Auto-replies (OOO), generic \"Received/Thanks\", unsubscribe confirmations, spam, or marketing.\n\n**OUTPUT:**\nReturn a JSON object with:\n- is_relevant (boolean)\n- category (One of: \"OOO\", \"Meeting Request\", \"Complaint\", \"Risk Signal\", \"General\", \"Spam\")\n- sentiment (Positive/Neutral/Negative)\n- summary (1 sentence summary of the ask)",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "4a3e8ab9-6a37-411a-a54c-92f2d9ac4044",
+      "name": "AI Relevance Check1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1712,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "f4509e9c-a0f2-495d-bd69-ee1cca791481",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        1088
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "q9gZmpdtFOHV8TIu",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check_relevance",
+              "leftValue": "={{ $json.output.is_relevant }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "name": "filter.operator.true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "739ff70f-b706-4e07-aa75-b201aea90453",
+      "name": "Only Allow Relevant1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09EK3QU4MC",
+          "mode": "list",
+          "cachedResultName": "customer-success"
+        },
+        "text": "=🔔 *New {{ $json.output.category }}* from {{ $('Extract Meta Data1').item.json.company_name }}\n\n**Sentiment:** {{ $json.output.sentiment }}\n**Summary:** {{ $json.output.summary }}\n\n> _{{ $('Extract Meta Data1').item.json.reply_text.slice(0, 100) }}..._\n\n👉 <https://mail.google.com/mail/u/0/#inbox/{{ $('Listen for Replies1').item.json.threadId }}|Reply in Gmail>",
+        "otherOptions": {}
+      },
+      "id": "39b8afca-5b7a-4f4f-aaa4-adbfa0a952af",
+      "name": "Notify Slack1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2512,
+        864
+      ],
+      "webhookId": "5515c449-688c-45e9-800a-e8c0242bc4e2",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "nffr3F4e1ZEp8q9L",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "UODak1MW3k3Dj2sD",
+          "mode": "list",
+          "cachedResultName": "Customer Response",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/UODak1MW3k3Dj2sD"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "CompanyName",
+              "displayName": "CompanyName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CompanyID",
+              "displayName": "CompanyID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        864
+      ],
+      "id": "6e2117a9-89d8-4b5e-abab-0fa80effa00c",
+      "name": "Insert row"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Relevance Check1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listen for Replies1": {
+      "main": [
+        [
+          {
+            "node": "Extract Meta Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Meta Data1": {
+      "main": [
+        [
+          {
+            "node": "AI Relevance Check1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Relevance Check1": {
+      "main": [
+        [
+          {
+            "node": "Only Allow Relevant1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Relevance Check1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only Allow Relevant1": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "Notify Slack1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "2168bea5-e8ac-4508-81bb-22730273a366",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ed9054be5a60a40f9bc4e3ee3b932937418f14706eb193ff214dded3eb350b8"
+  },
+  "id": "sSQozkPE85LlboEDs6--t",
+  "tags": []
+}

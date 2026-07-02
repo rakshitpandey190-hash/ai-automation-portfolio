@@ -1,0 +1,1264 @@
+{
+  "name": "Nudge Agent Workflow 1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panda-doc-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        576
+      ],
+      "id": "ae7fc669-f37d-4159-a4a8-95cb0f208e8e",
+      "name": "Webhook",
+      "webhookId": "cd2995dd-8f01-44e2-8b63-ae5fc1b5bd16"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "workspace": "1209182518219644",
+        "name": "={{ $('If').item.json.name }}",
+        "otherProperties": {
+          "assignee": "1209182518219631",
+          "projects": [
+            "1209185331326117"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        576
+      ],
+      "id": "d5af3823-fde9-43e2-b926-c7184ad48e33",
+      "name": "Create a task",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "08af993e-28d2-446c-8d09-85efeba9da4f",
+              "leftValue": "={{ $json.body[0].data.status }}",
+              "rightValue": "document.completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        576
+      ],
+      "id": "cb697f96-16d8-483d-8aa6-ee1d26f9a49b",
+      "name": "Check if order completed or signed"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "workspace": "1209182518219644",
+        "searchTaskProperties": {
+          "text": "={{ $json.name }}"
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        752,
+        576
+      ],
+      "id": "546e3eea-1280-4869-8227-bf6409eec2f4",
+      "name": "Check if task already created or not",
+      "alwaysOutputData": true,
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Code in JavaScript').item.json.name }}",
+        "driveId": {
+          "__rl": true,
+          "value": "0ADyzxPyGYB-xUk9PVA",
+          "mode": "list",
+          "cachedResultName": "Caddy ",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/0ADyzxPyGYB-xUk9PVA"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1C5ntqNaOr9w22sIULEnx2edZlQ9wqO1M",
+          "mode": "list",
+          "cachedResultName": "1. Clients in Onboarding",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1C5ntqNaOr9w22sIULEnx2edZlQ9wqO1M"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1872,
+        576
+      ],
+      "id": "fcb33627-75eb-4b5f-a0c1-938a2b0617c9",
+      "name": "Create folder using client name",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let name = \"\";\n// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.first().json.body[0].data.fields) {\n  if(item.field_id == \"Text1\"){\n    name = item.value;\n  }\n}\n\nreturn {name};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        576
+      ],
+      "id": "d2a8ffa3-1f41-457f-8876-955a99e92f53",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "269bb351-a012-41dc-b338-55169948fe5a",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        576
+      ],
+      "id": "dc37f07c-83cc-46b0-a299-a304ebab1176",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "share",
+        "folderNoRootId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "writer",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2096,
+        576
+      ],
+      "id": "8b395a67-7449-4649-a134-498ff57db6ae",
+      "name": "Share folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "limit": 500,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1I8ZWIFuJk8NP3VS10lDtV7Pc495bhdsR",
+            "mode": "list",
+            "cachedResultName": "1. Client Portal ",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1I8ZWIFuJk8NP3VS10lDtV7Pc495bhdsR"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2320,
+        576
+      ],
+      "id": "4a6ffc8d-2efa-4f76-89e0-205b1285104f",
+      "name": "Search files and folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c88d4863-1324-4dcc-99de-31f13b4f326b",
+              "leftValue": "={{Object.keys($json).length == 0}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        576
+      ],
+      "id": "ca226f01-ccd3-48db-ba8e-89a5b4d81d9f",
+      "name": "Check if task is already created or not"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $json.name }}",
+        "driveId": {
+          "__rl": true,
+          "value": "={{ $('Create folder using client name').item.json.teamDriveId }}",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Create folder using client name').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2544,
+        576
+      ],
+      "id": "361b6621-86df-4c9a-ba58-a0976c8b09b0",
+      "name": "Create folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "=",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Search files and folders').all().find(e=> e.json.name == $json.name).json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3216,
+        144
+      ],
+      "id": "bfecd7d2-8cd6-41fe-aef1-cc5651250f30",
+      "name": "Search files and folders1",
+      "executeOnce": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2768,
+        576
+      ],
+      "id": "c8f3ea64-75ec-477f-a1cf-1a72b8b25147",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        2992,
+        144
+      ],
+      "id": "01b6a285-0cd2-4a0e-825d-4b9804ef2343"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6ea786a7-0a20-4556-9309-58db606a7974",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "[INTERNAL USE ONLY]",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        3440,
+        144
+      ],
+      "id": "67909755-23b7-4c36-b750-209bdd4e53d3",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{$json[\"id\"]}}?supportsAllDrives=true&fields=id,name,mimeType",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3664,
+        144
+      ],
+      "id": "18331f23-8052-4684-8b2e-c9e9e66decfb",
+      "name": "HTTP Request",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0236cb58-26da-4290-8187-19e7650bb008",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "application/vnd.google-apps.folder",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4112,
+        144
+      ],
+      "id": "df758e7c-9ea8-4409-9bfd-7689120894eb",
+      "name": "If fetched data is folder"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $json.name}}",
+        "driveId": {
+          "__rl": true,
+          "value": "={{ $('Replace Me').item.json.driveId }}",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Replace Me').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4336,
+        144
+      ],
+      "id": "79b085ca-dad7-437b-bba5-bd4cf363272a",
+      "name": "Create folder1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4c0b2d79-2fab-4cd3-9c34-5b8d7e9d9a92",
+              "leftValue": "={{ $json?.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3888,
+        144
+      ],
+      "id": "bde2958f-4e42-479a-b3da-00084b02f8f1",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "name": "={{ $json.name }}",
+        "sameFolder": false,
+        "driveId": {
+          "__rl": true,
+          "value": "={{ $('Replace Me').item.json.driveId }}",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Replace Me').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4336,
+        336
+      ],
+      "id": "77f4c895-03fd-47fa-aa28-58983c318528",
+      "name": "Copy file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').first().json.body[0].data.recipients.find(item => item.email != \"ron@joincaddy.com\")?.email }},{{ $('Webhook').item.json.body[0].data.fields.filter(item => { \n    return [\"Text4_1_1_1\",\"Text4_1_1_1_1\",\"Text4_1_1_1_1_1\",\"Text4_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1_1_1_1\"].includes(item.field_id) \n    && item.value != null \n    && item.value.trim() != \"\"\n}).map(item => item.value).join(\",\") }}",
+        "subject": "=Welcome to Caddy, Team {{ $('Code in JavaScript').item.json.name }} – Let’s Get Started! ",
+        "message": "=<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n  </head>\n  <body>\n    <div>\n      <div>\n        <p style=\"margin: 0px\">Hi Team {{ $('Code in JavaScript').item.json.name }},</p>\n        <br />\n        <p style=\"margin: 0px\">\n          We're thrilled to have you and the team officially onboard! Over the \n          next few days, we’ll send you helpful onboarding information to make \n          sure you’re set up for success.\n        </p>\n        <br />\n        <p style=\"margin: 0px\">\n          To get started, please read through this email and watch the&nbsp;\n          welcome&nbsp;video below. This will give you a clear overview of the \n          process and next steps.\n        </p>\n        <p style=\"margin: 0px\"><br /></p>\n\n        <!-- VIDEO THUMBNAIL -->\n        <p style=\"margin: 0px\">\n          <a\n            href=\"https://drive.google.com/file/d/{{ $('Search files and folders3').all().find(item => item.json.name == 'Caddy Onboarding Kickoff').json.id }}/view?usp=drive_link\"\n            target=\"_blank\"\n          >\n            <img\n              src=\"https://ci3.googleusercontent.com/meips/ADKq_NbX8bg60h6Kl9fJBeK6U8F7-A_NmG1m3pyw0mNTyDU0U4AMHNa_NwzXYX2K1QhZUw4FY_xdIKDL7Iv09x1R7b_mImiAYpFqvj5vJe3DOVnYiooaQi9ibe1jxCsnJxWEee_A18pdlxk1Psdl-W86mlQZSLrzUgTDNWsHi3aEYWhWO8Y=s0-d-e1-ft#https://9042833.fs1.hubspotusercontent-na1.net/hubfs/9042833/Screenshot%202024-12-13%20at%201.35.06%20PM.png\"\n              width=\"400\"\n              height=\"224\"\n              alt=\"Onboarding Video\"\n              class=\"CToWUd\"\n              data-bit=\"iit\"\n            />\n          </a>\n          <br />\n        </p>\n\n        <!-- WATCH VIDEO LINK -->\n        <p style=\"margin: 0px;display: flex;\">\n          <img\n            data-emoji=\"🎬\"\n            class=\"an1 CToWUd\"\n            alt=\"🎬\"\n            aria-label=\"🎬\"\n            draggable=\"false\"\n            style=\"height: 17px;\"\n            src=\"https://fonts.gstatic.com/s/e/notoemoji/16.0/1f3ac/72.png\"\n            loading=\"lazy\"\n            data-bit=\"iit\"\n          />&nbsp;\n          <a\n            href=\"https://drive.google.com/file/d/{{ $('Search files and folders3').all().find(item => item.json.name == 'Caddy Onboarding Kickoff').json.id }}/view?usp=drive_link\"\n            target=\"_blank\"\n          >\n            Watch onboarding video\n          </a>\n        </p>\n      </div>\n\n      <div><br /></div>\n\n      <!-- NEXT STEPS SECTION -->\n      <div dir=\"ltr\" class=\"gmail_signature\">\n        <div dir=\"ltr\">\n          <div>\n            <p style=\"margin: 0px\">\n              <strong><span style=\"font-size: 24px\">Next steps</span></strong>\n            </p>\n            <p style=\"margin: 0px\">Please follow these steps to complete your onboarding</p>\n            <ol>\n              <li style=\"margin-left: 15px\">\n                <p style=\"margin: 0px\"><strong>Access Your Client Portal</strong></p>\n                <p style=\"margin: 0px\">\n                  Your shared folder is ready!\n                  <a\n                    href=\"https://drive.google.com/drive/folders/{{ $('Create folder using client name').item.json.id }}\"\n                    target=\"_blank\"\n                  >\n                    Access it here\n                  </a>\n                </p>\n              </li>\n\n              <li style=\"margin-left: 15px\">\n                <p style=\"margin: 0px\">\n                  <strong>Complete the Onboarding Questionnaire & Implementation Checklist</strong>\n                </p>\n                <p style=\"margin: 0px\">\n                  Let's make sure you have the right tools and create a project schedule.\n                  <a\n                    href=\"https://docs.google.com/document/d/{{ $('Search files and folders3').all().find(item => item.json.name == 'Onboarding Questionnaire').json.id }}/edit?tab=t.0\"\n                    target=\"_blank\"\n                  >\n                    Access it here\n                  </a>\n                </p>\n              </li>\n\n              <li style=\"margin-left: 15px\">\n                <p style=\"margin: 0px\"><strong>Whitelist our Email</strong></p>\n                <p style=\"margin: 0px\">\n                  Add @joincaddy.com to your email whitelist to ensure you don’t miss anything.\n                </p>\n              </li>\n            </ol>\n\n            <!-- TOOLS SECTION -->\n            <p style=\"margin: 0px\">\n              <strong><span style=\"font-size: 24px\">The tools you'll use</span></strong>\n            </p>\n            <ol>\n              <li style=\"margin-left: 15px\">\n                <p style=\"margin: 0px\"><strong>Client Portal</strong></p>\n                <p style=\"margin: 0px\">\n                  Where you will upload and access all implementation material, onboarding questionnaire and implementation checklist.\n                </p>\n              </li>\n\n   <li style=\"margin-left: 15px\">\n  <p style=\"margin: 0px\"><strong>Implementation Checklist</strong></p>\n  <p style=\"margin: 0px\">\n    The master checklist to keep your team on track.\n    <a\n      href=\"https://docs.google.com/spreadsheets/d/{{ $('Search files and folders3').all().find(item => (item.json.name?.trim() || '') == 'Implementation Checklist')?.json?.id }}/edit?tab=t.0\"\n      target=\"_blank\"\n    >\n      Access it here\n    </a>\n  </p>\n</li>\n            </ol>\n\n            <p style=\"margin: 0px\">\n              Once you've completed the Onboarding Questionnaire and assigned deadlines, our team will work with you to keep everything on track.\n            </p>\n            <br />\n\n            <!-- REFERRAL SECTION -->\n            <p style=\"margin: 0px\">\n              <strong><span style=\"font-size: 24px\">Refer & Save More!</span></strong>\n            </p>\n            <br />\n            <p style=\"margin: 0px\">\n              Know another business owner who may benefit from using Caddy?\n            </p>\n            <br />\n\n            <p style=\"margin: 0px;display: flex;\">\n              <img\n                data-emoji=\"✅\"\n                class=\"an1 CToWUd\"\n                alt=\"✅\"\n                style=\"height: 16px;\"\n                src=\"https://fonts.gstatic.com/s/e/notoemoji/16.0/2705/72.png\"\n              />&nbsp;a $100.00 gift card PLUS 3 bonus months on your next billing cycle.\n            </p>\n            <br />\n\n            <p style=\"margin: 0px;display: flex;\">\n              <img\n                data-emoji=\"✅\"\n                class=\"an1 CToWUd\"\n                alt=\"✅\"\n                style=\"height: 16px;\"\n                src=\"https://fonts.gstatic.com/s/e/notoemoji/16.0/2705/72.png\"\n              />&nbsp;3 extra bonus months for your referral’s first billing cycle.\n            </p>\n            <br />\n\n            <p style=\"margin: 0px\">\n              Feel free to share the\n              <a href=\"https://drive.google.com/drive/folders/1pzTwdv11zSZQbq_-jdNLnUqj4OUmRLCD\" target=\"_blank\">\n                Caddy Referral Toolkit\n              </a>.\n            </p>\n            <br />\n\n            <p style=\"margin: 0px\">\n              We’re here to help you every step of the way. Contact us at\n              <a href=\"mailto:hello@joincaddy.com\">hello@joincaddy.com</a>.\n            </p>\n            <br />\n\n            <p style=\"margin: 0px\">Best regards,</p>\n            <p style=\"margin: 0px\">The Caddy Team</p>\n            <br />\n\n            <img\n              src=\"https://9042833.fs1.hubspotusercontent-na1.net/hubfs/9042833/cady_logo_all_green%20(1).png\"\n              width=\"250\"\n              height=\"61\"\n            />\n<br>\n<br>\n            <div>\n              <b style=\"color: rgb(255, 0, 0)\">Core Support Hours:</b>\n              <span style=\"color: rgb(255, 0, 0)\">\n                Mon–Fri, 9:00 AM ET – 6:00 PM ET (Responses may be delayed outside these hours)\n              </span>\n            </div>\n          </div>\n        </div>\n      </div>\n\n    </div>\n  </body>\n</html>\n",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "gabrielle.castro@joincaddy.com,carlo.cadiz@joincaddy.com",
+          "senderName": "Ron from Caddy"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3888,
+        528
+      ],
+      "id": "82c9e7ad-f4c8-48f4-bd04-4e3aaf36b833",
+      "name": "Send a message",
+      "webhookId": "66374fbb-1119-4e7e-9125-66380d2762ba",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "1. Kickoff Phase",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('Create folder using client name').item.json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2992,
+        528
+      ],
+      "id": "49670979-8e74-4995-a243-5e5ce23fc461",
+      "name": "Search files and folders2",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_name",
+              "keyValue": "={{ $('Code in JavaScript').item.json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        576
+      ],
+      "id": "2d2ce65b-416d-4558-84e3-c7fc4c97aaaf",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "95f00e3e-fb08-4aeb-9067-b9f8fa084216",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1424,
+        576
+      ],
+      "id": "c42ac86a-60de-481c-b25b-41e2525eb8d3",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3216,
+        528
+      ],
+      "id": "b2092e10-4946-4f14-9778-154558cdea20",
+      "name": "Search files and folders3",
+      "executeOnce": false,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "G2FnNpWExWcjdQUD",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "steps_completed": "1",
+            "client_name": "={{ $('If').first().json.name }}",
+            "client_email": "={{ $('Webhook').first().json.body[0].data.recipients.find(item => item.email != \"ron@joincaddy.com\")?.email }}",
+            "team_emails": "={{ $('Webhook').item.json.body[0].data.fields.filter(item => { \n    return [\"Text4_1_1_1\",\"Text4_1_1_1_1\",\"Text4_1_1_1_1_1\",\"Text4_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1_1_1\",\"Text4_1_1_1_1_1_1_1_1_1_1_1_1\"].includes(item.field_id) \n    && item.value != null \n    && item.value.trim() != \"\"\n}).map(item => item.value).join(\",\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "client_email",
+              "displayName": "client_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "steps_completed",
+              "displayName": "steps_completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "team_emails",
+              "displayName": "team_emails",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4112,
+        528
+      ],
+      "id": "3929377b-91c6-4b95-af4c-baa037bb87c7",
+      "name": "Insert row",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c43743eb-cacf-4a96-869c-4ccbd1038853",
+              "leftValue": "={{ $json.client_name }}",
+              "rightValue": "={{ $('If').item.json.name }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3664,
+        528
+      ],
+      "id": "37faa255-8b85-45a6-b147-a54a83cb83a9",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "F1gHkWQbgy1TWv4W",
+          "mode": "list",
+          "cachedResultName": "client_onboarding_history",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/F1gHkWQbgy1TWv4W"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_name",
+              "keyValue": "={{ $('If').item.json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        528
+      ],
+      "id": "69d81a86-60e4-49ca-8a18-4a6d8a990fe0",
+      "name": "Get row(s)1",
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/search\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n          \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"{{ $('Code in JavaScript').item.json.name }} \"\n        }\n      ]\n    }\n  ],\n  \"limit\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4336,
+        528
+      ],
+      "id": "148c2993-431a-41ec-920a-433f9476dba7",
+      "name": "HTTP Request1",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"properties\": {\n    \"onboarding_status\": \"In Progress\",\n    \"onboarding_phase\": \"Kickoff\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4560,
+        528
+      ],
+      "id": "e646e5d2-9662-4cd0-bc17-355141b6d0be",
+      "name": "HTTP Request2",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check if order completed or signed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a task": {
+      "main": [
+        [
+          {
+            "node": "Create folder using client name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if order completed or signed": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if task already created or not": {
+      "main": [
+        [
+          {
+            "node": "Check if task is already created or not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Check if task already created or not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create folder using client name": {
+      "main": [
+        [
+          {
+            "node": "Share folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share folder": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Create folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if task is already created or not": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Create folder": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders1": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If fetched data is folder": {
+      "main": [
+        [
+          {
+            "node": "Create folder1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Copy file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "If fetched data is folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create folder1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy file": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders2": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Create a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders3": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Get row(s)1": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "37868bf8-7f3d-4e54-b085-5d33de9fcbe5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ed9054be5a60a40f9bc4e3ee3b932937418f14706eb193ff214dded3eb350b8"
+  },
+  "id": "jn7R94TtvRYGhgCW",
+  "tags": [
+    {
+      "updatedAt": "2025-10-16T07:23:54.464Z",
+      "createdAt": "2025-10-16T07:23:54.464Z",
+      "id": "NrYKQqlf6gU09tO9",
+      "name": "step1"
+    }
+  ]
+}

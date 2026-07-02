@@ -1,0 +1,257 @@
+{
+  "name": "Weekly Churn Risk Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "e4259605-549c-4972-865f-fce336c6af3e",
+      "name": "Monday 9AM Trigger1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -64,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOtqrheZHvN3hMba",
+          "mode": "list",
+          "cachedResultName": "Churn_Risk_Companies"
+        },
+        "returnAll": true
+      },
+      "id": "ae82ba4d-a881-4216-869e-c38d4e64158c",
+      "name": "Read Risk Table1",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        160,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const companies = $input.all().map(i => i.json);\n\n// Deduplicate by user_id — keep the latest entry per company\nconst latestByUser = {};\nfor (const company of companies) {\n  const uid = company.user_id || company.companyid || company.userid;\n  if (!uid) continue;\n  if (!latestByUser[uid] || company.id > latestByUser[uid].id) {\n    latestByUser[uid] = company;\n  }\n}\nconst unique = Object.values(latestByUser);\n\n// Initialize counters\nlet highRisk = 0;\nlet mediumRisk = 0;\nlet lowRisk = 0;\nlet noneRisk = 0;\nconst highRiskNames = [];\nconst mediumRiskNames = [];\n\n// Aggregate using health_status\nfor (const company of unique) {\n  const status = (company.healthstatus || company.health_status || '').trim();\n  const name = company.companyname || company.company_name || 'Unknown Company';\n\n  if (status === 'Poor Health') {\n    highRisk++;\n    highRiskNames.push(name);\n  } else if (status === 'Needs Attention') {\n    mediumRisk++;\n    mediumRiskNames.push(name);\n  } else if (status === 'Good Health') {\n    lowRisk++;\n  } else if (status === 'Safe' || status === 'None' || status === '') {\n    noneRisk++;\n  }\n}\n\nconst total = unique.length;\nconst dateStr = new Date().toISOString().split('T')[0];\n\nreturn [\n  {\n    json: {\n      report_date: dateStr,\n      total_scanned: total,\n      stats: {\n        high: highRisk,\n        medium: mediumRisk,\n        low: lowRisk,\n        safe: noneRisk\n      },\n      high_risk_list: highRiskNames.sort(),\n      medium_risk_list: mediumRiskNames.sort()\n    }\n  }\n];\n"
+      },
+      "id": "ac0dfeab-e840-44de-8943-fd3555dbda7c",
+      "name": "Calculate Stats1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Senior Customer Success Operations Analyst.\n\nYou will receive raw JSON data containing weekly customer health statistics.\nInput Data: {{ JSON.stringify($json) }}\n\nThe stats object contains:\n- high → Count of \"Poor Health\" accounts 🔴\n- medium → Count of \"Needs Attention\" accounts 🟡\n- low + safe → Count of \"Good Health\" accounts 🟢\n- high_risk_list → Company names in Poor Health\n- medium_risk_list → Company names in Needs Attention\n- total_scanned → Total unique accounts analyzed\n- report_date → The report date (YYYY-MM-DD)\n\nGeneral requirements:\n- Treat both \"Poor Health\" and \"Needs Attention\" as \"at risk\".\n- The input has already been deduplicated so that each company appears at most once,\n  using its latest available health record. Do NOT assume multiple rows per company\n  or invent any historical states.\n- Every company in high_risk_list and medium_risk_list MUST be mentioned by name\n  somewhere in both the Slack message and the email HTML, grouped by severity.\n- Be honest and neutral; no made‑up numbers.\n\n--------------------------------------------------\nFIELD 1: slack_message\n--------------------------------------------------\n\nGoal: A concise, human Slack update for the customer-success channel, using Slack mrkdwn.\n\nConstraints:\n- Output a single string assigned to `slack_message`.\n- Use Slack mrkdwn only (no HTML).\n- Use *bold* for emphasis where helpful.\n- Keep it short (roughly 4–10 lines).\n\nContent guidelines (flexible wording, no rigid template):\n- Start with a clear header including the report_date and that this is a weekly\n  customer health report.\n- Briefly summarize overall health: how many accounts are in Poor Health,\n  Needs Attention, and Good Health (use stats.high, stats.medium, stats.low + stats.safe).\n- Clearly call out at‑risk accounts:\n  - List ALL companies from high_risk_list under a clear \"Poor Health\" label.\n  - List ALL companies from medium_risk_list under a clear \"Needs Attention\" label.\n  - If a list is empty, you may say there are no companies in that category instead of listing.\n- Close with a short next‑steps line for the CS team (for example, suggesting review or outreach),\n  but do not reference any specific tooling like Asana by name unless it appears in the input.\n\n--------------------------------------------------\nFIELD 2: email_html\n--------------------------------------------------\n\nGoal: A readable weekly summary email for internal stakeholders.\n\nConstraints:\n- Output a single string assigned to `email_html`.\n- It must be valid HTML.\n- Use basic semantic tags (<h1>, <h2>, <p>, <ul>, <li>, <table>, etc.) and inline CSS\n  only where needed (no external stylesheets or scripts).\n- Tone: professional, clear, and concise.\n\nContent guidelines (flexible layout, no fixed template):\n- Include a heading that mentions \"Weekly Customer Health Report\" and the report_date.\n- Include an executive summary paragraph describing:\n  - total_scanned accounts\n  - how many are in Poor Health, Needs Attention, and Good Health\n  - a short interpretation of the overall trend if possible.\n- Provide a simple visual breakdown of health status counts and approximate shares\n  of the base (for example, a small table or clearly formatted list showing count\n  and percentage for each of Poor / Needs Attention / Good).\n- Add a section for at‑risk accounts:\n  - Under a clear subheading for Poor Health, list ALL company names from high_risk_list.\n  - Under a clear subheading for Needs Attention, list ALL company names from medium_risk_list.\n  - If a list is empty, explicitly say there are no companies in that category.\n- End with a brief note about recommended next steps or follow‑up (for example,\n  prioritizing outreach to Poor Health, then Needs Attention accounts).\n- Finish with a small, unobtrusive footer line indicating that this email was generated\n  by the Customer Health AI Agent.\n\n--------------------------------------------------\nFIELD 3: email_subject\n--------------------------------------------------\n\nGoal: A clear, informative email subject line.\n\nConstraints:\n- Output a single string assigned to `email_subject`.\n\nLogic:\n- If stats.high > 0:\n  - Use a subject that highlights how many accounts are in Poor Health and includes the report_date.\n    Example pattern (adapt the wording, not the numbers): \n    \"Weekly Customer Health: [stats.high] Accounts in Poor Health ([report_date])\"\n- If stats.high = 0:\n  - Use a subject that highlights the absence of Poor Health accounts but notes how many\n    Need Attention, and includes the report_date.\n    Example pattern (adapt the wording): \n    \"Weekly Customer Health: No Poor Health Accounts, [stats.medium] Need Attention ([report_date])\"\n\nRemember:\n- Always mention every company in high_risk_list and medium_risk_list by name in both\n  slack_message and email_html.\n- Preserve the numerical values from the JSON exactly; do not recalculate or round them away.\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        608,
+        1424
+      ],
+      "id": "5bf02e7d-2b0a-4fd0-abc8-a0b43439362b",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.1-chat-latest",
+          "mode": "list",
+          "cachedResultName": "gpt-5.1-chat-latest"
+        },
+        "builtInTools": {},
+        "options": {
+          "reasoningEffort": "medium"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        1648
+      ],
+      "id": "de9e0f7f-82fc-423b-9e0d-3883753666e6",
+      "name": "OpenAI Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "q9gZmpdtFOHV8TIu",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"slack_message\": {\n      \"type\": \"string\",\n      \"description\": \"The formatted Slack message using mrkdwn. No HTML. Use *bold* for emphasis.\"\n    },\n    \"email_subject\": {\n      \"type\": \"string\",\n      \"description\": \"The subject line for the email.\"\n    },\n    \"email_html\": {\n      \"type\": \"string\",\n      \"description\": \"The fully formatted HTML body for the email with inline CSS.\"\n    }\n  },\n  \"required\": [\"slack_message\", \"email_subject\", \"email_html\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        752,
+        1648
+      ],
+      "id": "ea6e8f62-68c6-4083-ae55-0777e5e790c8",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09EK3QU4MC",
+          "mode": "list",
+          "cachedResultName": "customer-success"
+        },
+        "text": "={{ $json.output.slack_message }}",
+        "otherOptions": {}
+      },
+      "id": "652eedd6-f545-455c-8b18-32e9df37f7aa",
+      "name": "Send to Slack1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        960,
+        1328
+      ],
+      "webhookId": "a9758f99-5f66-43f7-83ec-b3dd4e722500",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "nffr3F4e1ZEp8q9L",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "rakshit.siliconstream@gmail.com",
+        "subject": "={{ $json.output.email_subject }}",
+        "message": "={{ $json.output.email_html }}",
+        "options": {}
+      },
+      "id": "37afd4f7-551c-4cba-a343-3db91eccbedd",
+      "name": "Send to Email1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        1520
+      ],
+      "webhookId": "7d5576c0-2cd6-4f8b-ba77-911a37b2c3f7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Monday 9AM Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Read Risk Table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Risk Table1": {
+      "main": [
+        [
+          {
+            "node": "Calculate Stats1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Stats1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send to Slack1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send to Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "361fef03-20d2-48b7-93ba-b6f84c9d43da",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ed9054be5a60a40f9bc4e3ee3b932937418f14706eb193ff214dded3eb350b8"
+  },
+  "id": "eRT69UpzVr21ptcH",
+  "tags": []
+}

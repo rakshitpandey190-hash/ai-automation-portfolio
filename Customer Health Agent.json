@@ -1,0 +1,2548 @@
+{
+  "name": "Customer Health Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -768,
+        1376
+      ],
+      "id": "52d8e197-ab35-42d9-880d-9a5af63d2bab",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "company_name",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -96,
+        1184
+      ],
+      "id": "bbddc715-d0fd-4a29-b02f-295e2c42c623",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst root = item.body || item;\nconst apiResponse = root.data || root;\n\nif (!apiResponse || !apiResponse.seriesLabels || !apiResponse.series) {\n  return [{ json: { error: \"No WAU chart data found\" } }];\n}\n\nconst companies = apiResponse.seriesLabels;\nconst seriesData = apiResponse.series;\nconst xValues    = apiResponse.xValues || [];\n\n// ─────────────────────────────────────────────\n// Detect if last weekly bucket is a partial week\n// ─────────────────────────────────────────────\nlet wau_is_partial_week = false;\nlet wau_days_covered    = 7;\nlet wau_week_start_date = null;\n\nif (xValues.length > 0) {\n  const lastXStr  = xValues[xValues.length - 1];        // e.g. \"2026-02-23\"\n  const weekStart = new Date(lastXStr + \"T00:00:00Z\");\n  const weekEnd   = new Date(weekStart);\n  weekEnd.setUTCDate(weekStart.getUTCDate() + 7);\n\n  wau_week_start_date = lastXStr;\n\n  const nowUtc = new Date();\n  if (nowUtc < weekEnd) {\n    wau_is_partial_week = true;\n    const daysElapsed = Math.floor((nowUtc - weekStart) / (1000 * 60 * 60 * 24));\n    wau_days_covered   = Math.max(1, daysElapsed + 1); // Mon=1, Tue=2 ...\n  }\n}\n\nconst results = [];\n\nfor (let i = 0; i < companies.length; i++) {\n  const label = companies[i];\n\n  // ✅ Find first string in [0, \"Company Name\"]\n  let companyName;\n  if (Array.isArray(label)) {\n    companyName = label.find(v => typeof v === 'string') ?? null;\n  } else {\n    companyName = label;\n  }\n\n  if (!companyName || companyName === '(none)') continue;\n\n  const dataPoints = seriesData[i] || [];\n  const len        = dataPoints.length;\n\n  // ─────────────────────────────────────────────\n  // Rolling weekly buckets (newest → oldest)\n  // w1 = current/last week (may be partial)\n  // w2 = 1 week ago, w3 = 2 weeks ago, w4 = 3 weeks ago\n  // ─────────────────────────────────────────────\n  const w1 = len > 0 ? (dataPoints[len - 1]?.value ?? null) : null;\n  const w2 = len > 1 ? (dataPoints[len - 2]?.value ?? null) : null;\n  const w3 = len > 2 ? (dataPoints[len - 3]?.value ?? null) : null;\n  const w4 = len > 3 ? (dataPoints[len - 4]?.value ?? null) : null;\n\n  // Rolling window sums — null if any required component is missing\n  const WAU_last_7d  = w1;\n  const WAU_last_14d = w1 != null && w2 != null ? w1 + w2 : null;\n  const WAU_last_21d = w1 != null && w2 != null && w3 != null ? w1 + w2 + w3 : null;\n  const WAU_last_28d = w1 != null && w2 != null && w3 != null && w4 != null\n    ? w1 + w2 + w3 + w4 : null;\n\n  // ─────────────────────────────────────────────\n  // Partial week projections for current week (w1)\n  // ─────────────────────────────────────────────\n  const WAU_projected = (w1 != null && wau_days_covered > 0)\n    ? Math.round((w1 / wau_days_covered) * 7)\n    : null;\n\n  const WAU_daily_avg = (w1 != null && wau_days_covered > 0)\n    ? parseFloat((w1 / wau_days_covered).toFixed(2))\n    : null;\n\n  // Adjusted last_14d/21d/28d using projected w1 for fairer comparison\n  const WAU_last_14d_projected = (WAU_projected != null && w2 != null)\n    ? WAU_projected + w2 : null;\n  const WAU_last_21d_projected = (WAU_projected != null && w2 != null && w3 != null)\n    ? WAU_projected + w2 + w3 : null;\n  const WAU_last_28d_projected = (WAU_projected != null && w2 != null && w3 != null && w4 != null)\n    ? WAU_projected + w2 + w3 + w4 : null;\n\n  results.push({\n    json: {\n      company_name: companyName,\n\n      // ── CURRENT WEEK (w1, may be partial) ──\n      WAU:                  w1,               // raw count so far this week\n      WAU_days_covered:     wau_days_covered, // how many days are in w1\n      WAU_is_partial_week:  wau_is_partial_week,\n      WAU_projected,                          // full-week projection for w1\n      WAU_daily_avg,                          // daily pace this week\n      wau_week_start_date,\n\n      // ── ROLLING WINDOWS (raw) ──\n      WAU_last_7d,   // = w1 (current week raw)\n      WAU_last_14d,  // = w1 + w2\n      WAU_last_21d,  // = w1 + w2 + w3\n      WAU_last_28d,  // = w1 + w2 + w3 + w4\n\n      // ── ROLLING WINDOWS (projected) ──\n      // Replaces partial w1 with projected full-week value\n      // Use these when is_partial_week = true for fair threshold checks\n      WAU_last_14d_projected,\n      WAU_last_21d_projected,\n      WAU_last_28d_projected\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        992
+      ],
+      "id": "2e2295e9-07ff-4a3b-8b38-23269dfc45a5",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst apiResponse = item.body ? item.body.data : item.data;\n\nif (!apiResponse || !apiResponse.seriesLabels || !apiResponse.series) {\n  return [{ json: { error: \"No MAU chart data found\" } }];\n}\n\nconst companies = apiResponse.seriesLabels;\nconst seriesData = apiResponse.series;\nconst xValues    = apiResponse.xValues || [];\n\n// ─────────────────────────────────────────────\n// MONTHLY buckets — detect partial month\n// Last xValue = \"2026-02-01\" → Feb 2026\n// ─────────────────────────────────────────────\nlet mau_is_partial_month = false;\nlet mau_days_covered     = 31;\nlet mau_days_in_month    = 31;\nlet mau_month_start_date = null;\n\nif (xValues.length > 0) {\n  const lastXStr       = xValues[xValues.length - 1];      // \"2026-02-01\"\n  mau_month_start_date = lastXStr;\n\n  const monthStart  = new Date(lastXStr + \"T00:00:00Z\");\n  const year        = monthStart.getUTCFullYear();\n  const month       = monthStart.getUTCMonth();             // 0-indexed\n\n  // Exact days in this month (handles Feb 28/29, 30/31 month variations)\n  mau_days_in_month = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();\n\n  const monthEnd = new Date(Date.UTC(year, month + 1, 1)); // 1st of next month\n\n  const nowUtc = new Date();\n  if (nowUtc < monthEnd) {\n    mau_is_partial_month = true;\n    const daysElapsed = Math.floor((nowUtc - monthStart) / (1000 * 60 * 60 * 24));\n    mau_days_covered   = Math.max(1, daysElapsed + 1);      // Feb 1=1, Feb 24=24...\n  } else {\n    mau_days_covered = mau_days_in_month;\n  }\n}\n\nconst results = [];\n\nfor (let i = 0; i < companies.length; i++) {\n  const label = companies[i];\n\n  // ✅ Plain strings (like Forms) — but handles arrays gracefully too\n  let companyName;\n  if (Array.isArray(label)) {\n    companyName = label.find(v => typeof v === 'string') ?? null;\n  } else {\n    companyName = typeof label === 'string' ? label : null;\n  }\n\n  if (!companyName || companyName === '(none)') continue;\n\n  const dataPoints = seriesData[i] || [];\n  const len        = dataPoints.length;\n\n  // ─────────────────────────────────────────────\n  // Monthly rolling buckets (newest → oldest)\n  // w1 = current month (may be partial)\n  // w2 = last month, w3 = 2 months ago, w4 = 3 months ago\n  // ─────────────────────────────────────────────\n  const w1 = len > 0 ? (dataPoints[len - 1]?.value ?? null) : null;\n  const w2 = len > 1 ? (dataPoints[len - 2]?.value ?? null) : null;\n  const w3 = len > 2 ? (dataPoints[len - 3]?.value ?? null) : null;\n  const w4 = len > 3 ? (dataPoints[len - 4]?.value ?? null) : null;\n\n  // Rolling window sums — null if any required component is missing\n  const MAU_last_1m = w1;\n  const MAU_last_2m = w1 != null && w2 != null ? w1 + w2 : null;\n  const MAU_last_3m = w1 != null && w2 != null && w3 != null\n    ? w1 + w2 + w3 : null;\n  const MAU_last_4m = w1 != null && w2 != null && w3 != null && w4 != null\n    ? w1 + w2 + w3 + w4 : null;\n\n  // ─────────────────────────────────────────────\n  // Partial month projections\n  // Project w1 to full month at current daily pace\n  // ─────────────────────────────────────────────\n  const MAU_projected = (w1 != null && mau_days_covered > 0)\n    ? Math.round((w1 / mau_days_covered) * mau_days_in_month)\n    : null;\n\n  const MAU_daily_avg = (w1 != null && mau_days_covered > 0)\n    ? parseFloat((w1 / mau_days_covered).toFixed(2))\n    : null;\n\n  // Projected rolling windows — use projected w1 for fair threshold checks\n  const MAU_last_2m_projected = (MAU_projected != null && w2 != null)\n    ? MAU_projected + w2 : null;\n  const MAU_last_3m_projected = (MAU_projected != null && w2 != null && w3 != null)\n    ? MAU_projected + w2 + w3 : null;\n  const MAU_last_4m_projected = (MAU_projected != null && w2 != null && w3 != null && w4 != null)\n    ? MAU_projected + w2 + w3 + w4 : null;\n\n  results.push({\n    json: {\n      company_name: companyName,\n\n      // ── CURRENT MONTH (w1, may be partial) ──\n      monthly_active_users:  w1,                    // raw MAU so far this month\n      MAU_days_covered:      mau_days_covered,       // e.g. 24 (Feb 1–24)\n      MAU_days_in_month:     mau_days_in_month,      // e.g. 28 (Feb 2026)\n      MAU_is_partial_month:  mau_is_partial_month,   // true if month ongoing\n      MAU_projected,                                 // full-month projection\n      MAU_daily_avg,                                 // daily pace this month\n      mau_month_start_date,                          // \"2026-02-01\"\n\n      // ── ROLLING WINDOWS (raw) ──\n      MAU_last_1m,   // = w1 (this month raw)\n      MAU_last_2m,   // = w1 + w2\n      MAU_last_3m,   // = w1 + w2 + w3\n      MAU_last_4m,   // = w1 + w2 + w3 + w4\n\n      // ── ROLLING WINDOWS (projected) ──\n      // Replaces partial w1 with projected full-month value\n      // Use these when MAU_is_partial_month = true\n      MAU_last_2m_projected,\n      MAU_last_3m_projected,\n      MAU_last_4m_projected\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        1568
+      ],
+      "id": "06cd5709-899c-4806-a6a7-2bfccd5b20eb",
+      "name": "Code in JavaScript7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n\n  // ── Company name ──\n  let name = data.company_name || data.companyname || null;\n  if (Array.isArray(name)) name = name.find(v => typeof v === 'string') ?? null;\n  if (!name || name === '(none)' || name === '') continue;\n\n  const num = (v) => (v != null && v !== '' ? Number(v) : null);\n\n  output.push({\n    json: {\n      company_name: name,\n\n      // ── Forms (JS8 — weekly buckets) ──\n      forms_last_7d:                num(data.forms_last_7d),\n      forms_last_14d:               num(data.forms_last_14d),\n      forms_last_21d:               num(data.forms_last_21d),\n      forms_last_28d:               num(data.forms_last_28d),\n      forms_7d_projected:           num(data.forms_7d_projected),\n      forms_last_14d_projected:     num(data.forms_last_14d_projected),\n      forms_last_21d_projected:     num(data.forms_last_21d_projected),\n      forms_last_28d_projected:     num(data.forms_last_28d_projected),\n      forms_is_partial_week:        data.forms_is_partial_week         ?? null,\n      forms_days_covered:           num(data.forms_days_covered),\n      forms_daily_avg:              num(data.forms_daily_avg),\n      forms_week_start_date:        data.forms_week_start_date         ?? null,\n      days_since_last_form:         num(data.days_since_last_form),\n      days_since_last_form_display: data.days_since_last_form_display  ?? null,\n\n      // ── WAU (JS6 — weekly buckets) ──\n      WAU:                          num(data.WAU),\n      WAU_projected:                num(data.WAU_projected),\n      WAU_daily_avg:                num(data.WAU_daily_avg),\n      WAU_days_covered:             num(data.WAU_days_covered),\n      WAU_is_partial_week:          data.WAU_is_partial_week           ?? null,\n      WAU_last_7d:                  num(data.WAU_last_7d),\n      WAU_last_14d:                 num(data.WAU_last_14d),\n      WAU_last_21d:                 num(data.WAU_last_21d),\n      WAU_last_28d:                 num(data.WAU_last_28d),\n      WAU_last_14d_projected:       num(data.WAU_last_14d_projected),\n      WAU_last_21d_projected:       num(data.WAU_last_21d_projected),\n      WAU_last_28d_projected:       num(data.WAU_last_28d_projected),\n      wau_week_start_date:          data.wau_week_start_date           ?? null,\n    }\n  });\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        1184
+      ],
+      "id": "64a5b53a-c3d9-45ee-9bd0-9cd940e067c8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "company_name",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        352,
+        1376
+      ],
+      "id": "23d711f2-a959-40a4-970b-7082a2c67064",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\nfor (const item of $input.all()) {\n  const d = item.json;\n\n  // ── Company name ──\n  let name = d.company_name || d.companyname || null;\n  if (Array.isArray(name)) name = name.find(v => typeof v === 'string') ?? null;\n  if (!name || name.trim() === '' || name === '(none)') continue;\n\n  // ── Safe number helper — converts null/empty to 0 ──\n  const num = (v) => (v != null && v !== '' && !isNaN(Number(v)) ? Number(v) : 0);\n\n  output.push({\n    json: {\n      company_name: name.trim(),\n\n      // ══════════════════════════════════════════\n      // FORMS (JS8 — weekly buckets)\n      // ══════════════════════════════════════════\n      forms_last_7d:                num(d.forms_last_7d),\n      forms_last_14d:               num(d.forms_last_14d),\n      forms_last_21d:               num(d.forms_last_21d),\n      forms_last_28d:               num(d.forms_last_28d),\n      forms_7d_projected:           num(d.forms_7d_projected),\n      forms_last_14d_projected:     num(d.forms_last_14d_projected),\n      forms_last_21d_projected:     num(d.forms_last_21d_projected),\n      forms_last_28d_projected:     num(d.forms_last_28d_projected),\n      forms_is_partial_week:        d.forms_is_partial_week         ?? false,\n      forms_days_covered:           num(d.forms_days_covered),\n      forms_daily_avg:              num(d.forms_daily_avg),\n      forms_week_start_date:        d.forms_week_start_date         ?? null,\n      days_since_last_form:         num(d.days_since_last_form),\n      days_since_last_form_display: d.days_since_last_form_display  ?? \"Never\",\n\n      // ══════════════════════════════════════════\n      // WAU (JS6 — weekly buckets)\n      // ══════════════════════════════════════════\n      WAU:                          num(d.WAU),\n      WAU_projected:                num(d.WAU_projected),\n      WAU_daily_avg:                num(d.WAU_daily_avg),\n      WAU_days_covered:             num(d.WAU_days_covered),\n      WAU_is_partial_week:          d.WAU_is_partial_week           ?? false,\n      WAU_last_7d:                  num(d.WAU_last_7d),\n      WAU_last_14d:                 num(d.WAU_last_14d),\n      WAU_last_21d:                 num(d.WAU_last_21d),\n      WAU_last_28d:                 num(d.WAU_last_28d),\n      WAU_last_14d_projected:       num(d.WAU_last_14d_projected),\n      WAU_last_21d_projected:       num(d.WAU_last_21d_projected),\n      WAU_last_28d_projected:       num(d.WAU_last_28d_projected),\n      wau_week_start_date:          d.wau_week_start_date           ?? null,\n\n      // ══════════════════════════════════════════\n      // MAU (JS7 — monthly buckets)\n      // ══════════════════════════════════════════\n      monthly_active_users:         num(d.monthly_active_users),\n      MAU_projected:                num(d.MAU_projected),\n      MAU_daily_avg:                num(d.MAU_daily_avg),\n      MAU_days_covered:             num(d.MAU_days_covered),\n      MAU_days_in_month:            num(d.MAU_days_in_month),\n      MAU_is_partial_month:         d.MAU_is_partial_month          ?? false,\n      MAU_last_1m:                  num(d.MAU_last_1m),\n      MAU_last_2m:                  num(d.MAU_last_2m),\n      MAU_last_3m:                  num(d.MAU_last_3m),\n      MAU_last_4m:                  num(d.MAU_last_4m),\n      MAU_last_2m_projected:        num(d.MAU_last_2m_projected),\n      MAU_last_3m_projected:        num(d.MAU_last_3m_projected),\n      MAU_last_4m_projected:        num(d.MAU_last_4m_projected),\n      mau_month_start_date:         d.mau_month_start_date          ?? null,\n\n      // ══════════════════════════════════════════\n      // ADMIN INSIGHTS (JS2 — weekly buckets)\n      // ══════════════════════════════════════════\n      admin_insight_count:          num(d.admin_insight_count),\n      admin_insight_projected:      num(d.admin_insight_projected),\n      admin_insight_is_partial:     d.admin_insight_is_partial      ?? false,\n      admin_insight_last_7d:        num(d.admin_insight_last_7d),\n      admin_insight_last_14d:       num(d.admin_insight_last_14d),\n      admin_insight_last_21d:       num(d.admin_insight_last_21d),\n      admin_insight_last_28d:       num(d.admin_insight_last_28d),\n\n      // ══════════════════════════════════════════\n      // ADMIN LOGIN (JS3 — daily buckets)\n      // ══════════════════════════════════════════\n      admin_login_today:            num(d.admin_login_today),\n      admin_login_yesterday:        num(d.admin_login_yesterday),\n      admin_login_last_7d:          num(d.admin_login_last_7d),\n      admin_login_last_14d:         num(d.admin_login_last_14d),\n      admin_login_last_21d:         num(d.admin_login_last_21d),\n      admin_login_last_28d:         num(d.admin_login_last_28d),\n      admin_login_last_day_is_today: d.admin_login_last_day_is_today ?? false,\n      admin_login_last_date:        d.admin_login_last_date         ?? null,\n    }\n  });\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        1376
+      ],
+      "id": "cebd64b4-d17e-4727-81b3-fd9a4af5f9a8",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/companies/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filterGroups\": [\n    {\n      \"filters\": [\n        {\n          \"propertyName\": \"name\",\n         \"operator\": \"CONTAINS_TOKEN\",\n          \"value\": \"{{ $('Code in JavaScript1').item.json.company_name }}\"\n        }\n      ]\n    }\n  ],\n  \"properties\": [\n    \"name\",\n    \"domain\",\n    \"timezone\",\n    \"time_zone\",\n    \"state\",\n    \"caddy_lifecycle_stage\",\n    \"onboarding_phase\",\n    \"sla_tier\",\n    \"seats\",\n    \"support_tier\",\n    \"num_paid_seats\",\n    \"churn_risk_score\",\n    \"churn_risk_reason\"\n  ],\n  \"limit\": 1\n}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1248,
+        1072
+      ],
+      "id": "aa71aa1a-1c48-4a5e-8f50-970ba675c938",
+      "name": "HubSpot Search",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        800,
+        1376
+      ],
+      "id": "553ef720-c5ae-4f71-a673-34ce746a623b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6796ed39-266e-4280-8ec3-a615a924c704",
+              "leftValue": "={{ $json.company_name?.trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1024,
+        1072
+      ],
+      "id": "2e9c6664-7237-479e-8793-5c7de836136a",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ══════════════════════════════════════════════════════\n// Code in JavaScript4 — HubSpot + Amplitude Combiner\n// Mode: Run Once for All Items\n// ══════════════════════════════════════════════════════\n\n// ── Safe number helper (Defaults to 0 for math fields) ──\nconst num = (v, fallback = 0) =>\n  (v != null && v !== '' && !isNaN(Number(v)) ? Number(v) : fallback);\n\n// ── 1. Get HubSpot response ──\nconst allInputs = $input.all();\nif (!allInputs || allInputs.length === 0) {\n  return [{ json: { error: 'No input data', skipai: true } }];\n}\n\nconst hubspotResponse = allInputs[0].json;\nconst results = hubspotResponse.results || [];\n\n// ── 2. Get Amplitude Data Directly from the Loop ──\nlet amp = null;\ntry {\n  // ✅ FIX: Use .first() instead of .item because the node is in \"Run Once for All Items\" mode.\n  // Since the loop processes 1 item at a time, .first() safely grabs the current Amplitude record.\n  amp = $('Loop Over Items').first().json;\n} catch(e) {}\n\nconst ampCompanyName = amp ? amp.company_name : null;\n\nconst hubspotData = results.length > 0 ? results[0] : null;\nconst props = hubspotData ? hubspotData.properties : {};\n\n// HubSpot name takes priority, fallback to Amplitude name\nconst companyName = props.name || ampCompanyName || \"Unknown Company\";\n\nif (results.length === 0) {\n  return [{\n    json: {\n      error: 'Company not found in HubSpot',\n      skipai: true,\n      company_name: companyName,\n    }\n  }];\n}\n\n// ── Lifecycle filter ──\nconst rawStage = (props.caddy_lifecycle_stage || '').trim();\nif (rawStage.toLowerCase() !== 'live customer') {\n  return [{\n    json: {\n      error: `Skipped — lifecycle stage: \"${rawStage || 'unknown'}\"`,\n      skipai: true,\n      companyid: hubspotData.id || \"MISSING_ID\",\n      company_name: companyName,\n    }\n  }];\n}\n\n// ── Timezone Resolution ──\nlet accounttimezone = props.timezone || null;\nif (!accounttimezone || typeof accounttimezone !== 'string' || !accounttimezone.includes('/')) {\n  accounttimezone = 'America/New_York';\n}\n\nif (!amp) amp = {};\n\n// ── 5. Build FULL output ──\nreturn [{\n  json: {\n\n    companyid: hubspotData.id || \"MISSING_ID\",\n    company_name: companyName,\n    domain: props.domain || null,\n    accounttimezone,\n\n    lifecyclestage: props.caddy_lifecycle_stage || 'Live Customer',\n    onboardingphase: props.onboarding_phase || 'Completed',\n    slatier: props.sla_tier || 'Basic',\n    supporttier: props.support_tier || 'Standard',\n\n    // ✅ Paid Seats defaults to 1\n    paidseats: num(props.seats, 1),\n\n    // ✅ Strings default correctly\n    churnriskscoreprev: num(props.churn_risk_score),\n    churnriskreasonprev: props.churn_risk_reason || \"None\",\n\n    forms_last_7d: num(amp.forms_last_7d),\n    forms_last_14d: num(amp.forms_last_14d),\n    forms_last_21d: num(amp.forms_last_21d),\n    forms_last_28d: num(amp.forms_last_28d),\n    forms_7d_projected: num(amp.forms_7d_projected),\n    forms_last_14d_projected: num(amp.forms_last_14d_projected),\n    forms_last_21d_projected: num(amp.forms_last_21d_projected),\n    forms_last_28d_projected: num(amp.forms_last_28d_projected),\n    \n    // ✅ Booleans default to false, Dates default to null\n    forms_is_partial_week: amp.forms_is_partial_week ?? false,\n    forms_days_covered: num(amp.forms_days_covered),\n    forms_daily_avg: num(amp.forms_daily_avg),\n    forms_week_start_date: amp.forms_week_start_date ?? null,\n    days_since_last_form: num(amp.days_since_last_form),\n    days_since_last_form_display: amp.days_since_last_form_display || \"Never\",\n\n    WAU: num(amp.WAU),\n    WAU_projected: num(amp.WAU_projected),\n    WAU_daily_avg: num(amp.WAU_daily_avg),\n    WAU_days_covered: num(amp.WAU_days_covered),\n    WAU_is_partial_week: amp.WAU_is_partial_week ?? false,\n    WAU_last_7d: num(amp.WAU_last_7d),\n    WAU_last_14d: num(amp.WAU_last_14d),\n    WAU_last_21d: num(amp.WAU_last_21d),\n    WAU_last_28d: num(amp.WAU_last_28d),\n    WAU_last_14d_projected: num(amp.WAU_last_14d_projected),\n    WAU_last_21d_projected: num(amp.WAU_last_21d_projected),\n    WAU_last_28d_projected: num(amp.WAU_last_28d_projected),\n    wau_week_start_date: amp.wau_week_start_date ?? null,\n\n    monthly_active_users: num(amp.monthly_active_users),\n    MAU_projected: num(amp.MAU_projected),\n    MAU_daily_avg: num(amp.MAU_daily_avg),\n    MAU_days_covered: num(amp.MAU_days_covered),\n    MAU_days_in_month: num(amp.MAU_days_in_month),\n    MAU_is_partial_month: amp.MAU_is_partial_month ?? false,\n    MAU_last_1m: num(amp.MAU_last_1m),\n    MAU_last_2m: num(amp.MAU_last_2m),\n    MAU_last_3m: num(amp.MAU_last_3m),\n    MAU_last_4m: num(amp.MAU_last_4m),\n    MAU_last_2m_projected: num(amp.MAU_last_2m_projected),\n    MAU_last_3m_projected: num(amp.MAU_last_3m_projected),\n    MAU_last_4m_projected: num(amp.MAU_last_4m_projected),\n    mau_month_start_date: amp.mau_month_start_date ?? null,\n\n    admin_insight_count: num(amp.admin_insight_count),\n    admin_insight_projected: num(amp.admin_insight_projected),\n    admin_insight_is_partial: amp.admin_insight_is_partial ?? false,\n    admin_insight_last_7d: num(amp.admin_insight_last_7d),\n    admin_insight_last_14d: num(amp.admin_insight_last_14d),\n    admin_insight_last_21d: num(amp.admin_insight_last_21d),\n    admin_insight_last_28d: num(amp.admin_insight_last_28d),\n\n    admin_login_today: num(amp.admin_login_today),\n    admin_login_yesterday: num(amp.admin_login_yesterday),\n    admin_login_last_7d: num(amp.admin_login_last_7d),\n    admin_login_last_14d: num(amp.admin_login_last_14d),\n    admin_login_last_21d: num(amp.admin_login_last_21d),\n    admin_login_last_28d: num(amp.admin_login_last_28d),\n    admin_login_last_day_is_today: amp.admin_login_last_day_is_today ?? false,\n    admin_login_last_date: amp.admin_login_last_date ?? null,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        1120
+      ],
+      "id": "a500d7fb-9f1c-43a0-834b-9b4b547fe7dc",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// ✅ Safe access\nconst api = item.body?.data || item.data || {};\n\nif (!api.seriesLabels || !api.series) {\n  return [{ json: { error: \"No admin insight data found\" } }];\n}\n\nconst labels     = api.seriesLabels || [];\nconst seriesData = api.series       || [];\nconst xValues    = api.xValues      || [];\n\n// ─────────────────────────────────────────────\n// Detect partial week from xValues\n// ─────────────────────────────────────────────\nlet is_partial_week = false;\nlet days_covered    = 7;\n\nif (xValues.length > 0) {\n  const lastXStr  = xValues[xValues.length - 1];\n  const weekStart = new Date(lastXStr + \"T00:00:00Z\");\n  const weekEnd   = new Date(weekStart);\n  weekEnd.setUTCDate(weekStart.getUTCDate() + 7);\n\n  const nowUtc = new Date();\n  if (nowUtc < weekEnd) {\n    is_partial_week = true;\n    const daysElapsed = Math.floor((nowUtc - weekStart) / (1000 * 60 * 60 * 24));\n    days_covered      = Math.max(1, daysElapsed + 1);\n  }\n}\n\nconst results = [];\n\nfor (let i = 0; i < labels.length; i++) {\n  const label = labels[i];\n\n  // ✅ Works for both [0, \"Name\"] and [\"Name\", \"Web\"]\n  let name;\n  if (Array.isArray(label)) {\n    name = label.find(v => typeof v === 'string') ?? null;\n  } else {\n    name = label;\n  }\n\n  if (!name || name === '(none)') continue;\n\n  const dataPoints = seriesData[i] || [];\n  const len        = dataPoints.length;\n\n  // Rolling weekly buckets (newest → oldest)\n  const w1 = len > 0 ? (dataPoints[len - 1]?.value ?? null) : null;\n  const w2 = len > 1 ? (dataPoints[len - 2]?.value ?? null) : null;\n  const w3 = len > 2 ? (dataPoints[len - 3]?.value ?? null) : null;\n  const w4 = len > 3 ? (dataPoints[len - 4]?.value ?? null) : null;\n\n  // Rolling window sums\n  const admin_insight_last_7d  = w1;\n  const admin_insight_last_14d = w1 != null && w2 != null ? w1 + w2 : null;\n  const admin_insight_last_21d = w1 != null && w2 != null && w3 != null\n    ? w1 + w2 + w3 : null;\n  const admin_insight_last_28d = w1 != null && w2 != null && w3 != null && w4 != null\n    ? w1 + w2 + w3 + w4 : null;\n\n  // Projected full-week value for w1 if partial\n  const admin_insight_projected = (w1 != null && days_covered > 0)\n    ? Math.round((w1 / days_covered) * 7)\n    : null;\n\n  results.push({\n    json: {\n      company_name: name,\n\n      // Current week (may be partial)\n      admin_insight_count:       w1,\n      admin_insight_days_covered: days_covered,\n      admin_insight_is_partial:  is_partial_week,\n      admin_insight_projected,\n\n      // Rolling windows (raw)\n      admin_insight_last_7d,\n      admin_insight_last_14d,\n      admin_insight_last_21d,\n      admin_insight_last_28d\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        1184
+      ],
+      "id": "6eeb14af-aec7-4eb3-abf1-d947f9376853",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// ✅ Safe access\nconst api = item.body?.data || item.data || {};\n\nif (!api.seriesLabels || !api.series) {\n  return [{ json: { error: \"No admin login data found\" } }];\n}\n\nconst labels     = api.seriesLabels || [];\nconst seriesData = api.series       || [];\nconst xValues    = api.xValues      || [];\n\n// ─────────────────────────────────────────────\n// DAILY buckets — detect if last point is today (partial day)\n// ─────────────────────────────────────────────\nlet last_day_is_today  = false;\nlet last_date_str      = null;\n\nif (xValues.length > 0) {\n  last_date_str         = xValues[xValues.length - 1];        // \"2026-02-24\"\n  const todayUtc        = new Date().toISOString().split(\"T\")[0];\n  last_day_is_today     = (last_date_str === todayUtc);\n}\n\nconst results = [];\n\nfor (let i = 0; i < labels.length; i++) {\n  const label = labels[i];\n\n  // ✅ Plain strings — but handles arrays gracefully too\n  let name;\n  if (Array.isArray(label)) {\n    name = label.find(v => typeof v === 'string') ?? null;\n  } else {\n    name = typeof label === 'string' ? label : null;\n  }\n\n  if (!name || name === '(none)') continue;\n\n  const dataPoints = seriesData[i] || [];\n  const len        = dataPoints.length;\n\n  // ─────────────────────────────────────────────\n  // DAILY rolling windows\n  // Sum last N points directly — each = 1 day\n  // ─────────────────────────────────────────────\n\n  // Helper: sum last N days, null if fewer than N points available\n  function sumLast(n) {\n    if (len < n) return null;\n    let total = 0;\n    for (let j = len - n; j < len; j++) {\n      const v = dataPoints[j]?.value;\n      if (v == null) return null;\n      total += v;\n    }\n    return total;\n  }\n\n  const admin_login_last_7d  = sumLast(7);\n  const admin_login_last_14d = sumLast(14);\n  const admin_login_last_21d = sumLast(21);\n  const admin_login_last_28d = sumLast(28);\n\n  // Today's raw value (may be a partial day)\n  const admin_login_today = len > 0\n    ? (dataPoints[len - 1]?.value ?? null)\n    : null;\n\n  // Yesterday's value (last full day)\n  const admin_login_yesterday = len > 1\n    ? (dataPoints[len - 2]?.value ?? null)\n    : null;\n\n  results.push({\n    json: {\n      company_name: name,\n\n      // ── TODAY (may be partial) ──\n      admin_login_today,                          // today's raw count\n      admin_login_yesterday,                      // last full day\n      admin_login_last_day_is_today: last_day_is_today,\n      admin_login_last_date: last_date_str,\n\n      // ── ROLLING WINDOWS (exact daily sums) ──\n      admin_login_last_7d,\n      admin_login_last_14d,\n      admin_login_last_21d,\n      admin_login_last_28d\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        1760
+      ],
+      "id": "c145dea3-9d82-4c79-819a-237edfde8cef",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst api  = item.body?.data || item.data || {};\n\nif (!api.seriesLabels || !api.series) {\n  return [{ json: { error: \"No forms data found\" } }];\n}\n\nconst labels     = api.seriesLabels || [];\nconst seriesData = api.series       || [];\nconst xValues    = api.xValues      || [];\n\n// ─────────────────────────────────────────────\n// Detect partial week from xValues\n// Last xValue = start of current week bucket\n// ─────────────────────────────────────────────\nlet is_partial_week = false;\nlet days_covered    = 7;\nlet week_start_date = null;\n\nif (xValues.length > 0) {\n  const lastXStr  = xValues[xValues.length - 1];       // \"2026-02-23\"\n  const weekStart = new Date(lastXStr + \"T00:00:00Z\");\n  const weekEnd   = new Date(weekStart);\n  weekEnd.setUTCDate(weekStart.getUTCDate() + 7);\n\n  week_start_date = lastXStr;\n\n  const nowUtc = new Date();\n  if (nowUtc < weekEnd) {\n    is_partial_week = true;\n    const daysElapsed = Math.floor((nowUtc - weekStart) / (1000 * 60 * 60 * 24));\n    days_covered      = Math.max(1, daysElapsed + 1); // Mon=1, Tue=2...\n  }\n}\n\nconst results = [];\n\nfor (let i = 0; i < labels.length; i++) {\n  const label = labels[i];\n\n  // ✅ Forms labels are plain strings — but handle arrays gracefully too\n  let name;\n  if (Array.isArray(label)) {\n    name = label.find(v => typeof v === 'string') ?? null;\n  } else {\n    name = typeof label === 'string' ? label : null;\n  }\n\n  if (!name || name === '(none)') continue;\n\n  const dataPoints = seriesData[i] || [];\n  const len        = dataPoints.length;\n\n  // ─────────────────────────────────────────────\n  // Rolling weekly buckets (newest → oldest)\n  // w1 = current week (may be partial)\n  // w2 = 1 week ago, w3 = 2 weeks ago, w4 = 3 weeks ago\n  // ─────────────────────────────────────────────\n  const w1 = len > 0 ? (dataPoints[len - 1]?.value ?? null) : null;\n  const w2 = len > 1 ? (dataPoints[len - 2]?.value ?? null) : null;\n  const w3 = len > 2 ? (dataPoints[len - 3]?.value ?? null) : null;\n  const w4 = len > 3 ? (dataPoints[len - 4]?.value ?? null) : null;\n\n  // Rolling window sums — null if any required component is missing\n  const forms_last_7d  = w1;\n  const forms_last_14d = w1 != null && w2 != null ? w1 + w2 : null;\n  const forms_last_21d = w1 != null && w2 != null && w3 != null\n    ? w1 + w2 + w3 : null;\n  const forms_last_28d = w1 != null && w2 != null && w3 != null && w4 != null\n    ? w1 + w2 + w3 + w4 : null;\n\n  // ─────────────────────────────────────────────\n  // Partial week projections\n  // Replace partial w1 with projected full-week value\n  // ─────────────────────────────────────────────\n  const forms_7d_projected = (w1 != null && days_covered > 0)\n    ? Math.round((w1 / days_covered) * 7)\n    : null;\n\n  const forms_daily_avg = (w1 != null && days_covered > 0)\n    ? parseFloat((w1 / days_covered).toFixed(2))\n    : null;\n\n  const forms_last_14d_projected = (forms_7d_projected != null && w2 != null)\n    ? forms_7d_projected + w2 : null;\n  const forms_last_21d_projected = (forms_7d_projected != null && w2 != null && w3 != null)\n    ? forms_7d_projected + w2 + w3 : null;\n  const forms_last_28d_projected = (forms_7d_projected != null && w2 != null && w3 != null && w4 != null)\n    ? forms_7d_projected + w2 + w3 + w4 : null;\n\n  // ─────────────────────────────────────────────\n  // Recency — based on rolling windows\n  // Use projected w1 when partial week to avoid false \"no forms\" signal\n  // ─────────────────────────────────────────────\n  const effective_7d = is_partial_week ? forms_7d_projected : forms_last_7d;\n\n  let days_since_last_form         = null;\n  let days_since_last_form_display = null;\n\n  if (effective_7d != null && effective_7d > 0) {\n    days_since_last_form         = 3;\n    days_since_last_form_display = \"within the last 7 days\";\n  } else if (forms_last_14d != null && forms_last_14d > 0) {\n    days_since_last_form         = 10;\n    days_since_last_form_display = \"between 7–14 days ago\";\n  } else if (forms_last_21d != null && forms_last_21d > 0) {\n    days_since_last_form         = 17;\n    days_since_last_form_display = \"between 14–21 days ago\";\n  } else if (forms_last_28d != null && forms_last_28d > 0) {\n    days_since_last_form         = 24;\n    days_since_last_form_display = \"between 21–28 days ago\";\n  } else if (forms_last_28d != null) {\n    days_since_last_form         = null;\n    days_since_last_form_display = \"more than 28 days ago\";\n  }\n  // All windows null → both stay null (insufficient data)\n\n  results.push({\n    json: {\n      company_name: name,\n\n      // ── CURRENT WEEK (w1, may be partial) ──\n      forms_last_7d,                           // raw count so far this week\n      forms_days_covered:     days_covered,    // how many days are in w1\n      forms_is_partial_week:  is_partial_week,\n      forms_7d_projected,                      // full-week projection\n      forms_daily_avg,                         // daily pace this week\n      forms_week_start_date:  week_start_date,\n\n      // ── ROLLING WINDOWS (raw) ──\n      forms_last_14d,\n      forms_last_21d,\n      forms_last_28d,\n\n      // ── ROLLING WINDOWS (projected) ──\n      // Use these when is_partial_week = true for fair threshold checks\n      forms_last_14d_projected,\n      forms_last_21d_projected,\n      forms_last_28d_projected,\n\n      // ── RECENCY ──\n      days_since_last_form,\n      days_since_last_form_display\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        1376
+      ],
+      "id": "5ac9fddc-7b27-4ba1-8b40-5482aa47e4b2",
+      "name": "Code in JavaScript8"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "company_name",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -96,
+        1376
+      ],
+      "id": "defd709d-6d60-4d90-96e9-1c73c5cdda6b",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "company_name",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        128,
+        1472
+      ],
+      "id": "165dc1a6-fd40-4cb1-b94a-6fbb5946e8a3",
+      "name": "Merge4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "40b6adfa-99b5-44db-8261-b8e11049feba",
+              "leftValue": "={{ $json.skip_ai ?? true }}",
+              "rightValue": "\"true\"",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "3b963683-a698-48d7-a289-519d8befdf64",
+              "leftValue": "={{ $json.companyid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1024,
+        1312
+      ],
+      "id": "8940b13d-a531-4515-897c-5bf210e25612",
+      "name": "Filter – Valid Company for AI"
+    },
+    {
+      "parameters": {
+        "url": "=https://amplitude.com/api/3/chart/p1f7dlbr/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -544,
+        992
+      ],
+      "id": "0a82351a-e4b7-45d1-8c6a-c466b98476bf",
+      "name": "WAU",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TKxYsX5Th0MlplJM",
+          "name": "Amplitude"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://amplitude.com/api/3/chart/oie5n55t/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -544,
+        1184
+      ],
+      "id": "2ce77968-a951-40e8-94a2-347d6b779109",
+      "name": "Admin Insights",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TKxYsX5Th0MlplJM",
+          "name": "Amplitude"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://amplitude.com/api/3/chart/7ohplwc9/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -544,
+        1568
+      ],
+      "id": "0c2eca54-d677-4641-baaf-6b227a517ea2",
+      "name": "MAU",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TKxYsX5Th0MlplJM",
+          "name": "Amplitude"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://amplitude.com/api/3/chart/am395lo4/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -320,
+        1760
+      ],
+      "id": "44a06cbd-7d7d-4f47-9088-58e345bee032",
+      "name": "Admin Login",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TKxYsX5Th0MlplJM",
+          "name": "Amplitude"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-2024-11-20",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-2024-11-20"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        1632
+      ],
+      "id": "430bfb1d-1fad-4190-a507-aef2733ed069",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "q9gZmpdtFOHV8TIu",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOtqrheZHvN3hMba",
+          "mode": "list",
+          "cachedResultName": "Churn_Risk_Companies",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YOtqrheZHvN3hMba"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userid }}",
+            "company_name": "={{ $json.companyname }}",
+            "health_score": "={{ $json.healthscore }}",
+            "risk_score": "={{ $json.riskscore }}",
+            "Email": "={{ $json.Email }}",
+            "health_status": "={{ $json.healthstatus }}",
+            "reasoning": "={{ $json.reasoning }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_status",
+              "displayName": "health_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_score",
+              "displayName": "health_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3744,
+        1488
+      ],
+      "id": "9e0735fe-0e6d-4d10-9ede-e432c5ae5767",
+      "name": "Insert row3"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOtqrheZHvN3hMba",
+          "mode": "list",
+          "cachedResultName": "Churn_Risk_Companies",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YOtqrheZHvN3hMba"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.companyid }}",
+            "company_name": "={{ $json.companyname }}",
+            "risk_score": "={{ $json.churnriskscore }}",
+            "health_score": "={{ $json.healthscore }}",
+            "Email": "={{ $json.Email }}",
+            "health_status": "={{ $json.healthstatus }}",
+            "reasoning": "={{ $json.reason.context }}",
+            "Action": "={{ $json.action }}",
+            "slatier": "={{ $json.slatier }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_status",
+              "displayName": "health_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_score",
+              "displayName": "health_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "slatier",
+              "displayName": "slatier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3744,
+        1680
+      ],
+      "id": "770cc66e-c2c5-4434-bdee-91f03c4f9eed",
+      "name": "Insert row4"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOtqrheZHvN3hMba",
+          "mode": "list",
+          "cachedResultName": "Churn_Risk_Companies",
+          "cachedResultUrl": "/projects/SqNBLnGl05OTpB3y/datatables/YOtqrheZHvN3hMba"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.companyid }}",
+            "health_status": "={{ $json.healthstatus }}",
+            "company_name": "={{ $json.companyname }}",
+            "reasoning": "={{ $json.reason.summary }}",
+            "risk_score": "={{ $json.churnriskscore }}",
+            "Email": "={{ $json.primarycontactemail }}",
+            "health_score": "={{ $json.healthscore }}",
+            "slatier": "={{ $json.slatier }}",
+            "Action": "={{ $json.action }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_status",
+              "displayName": "health_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_score",
+              "displayName": "health_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "slatier",
+              "displayName": "slatier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2272,
+        1312
+      ],
+      "id": "0d8f1c6a-ab04-4a44-ac04-bcb58e51c3c5",
+      "name": "Insert row5"
+    },
+    {
+      "parameters": {
+        "url": "=https://amplitude.com/api/3/chart/pcgfi70y/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -544,
+        1376
+      ],
+      "id": "cd0d952a-efc3-4984-8207-109565b9dc3e",
+      "name": "Forms Submitted",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "TKxYsX5Th0MlplJM",
+          "name": "Amplitude"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.healthstatus }}",
+                    "rightValue": "Poor Health",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a3bb6a51-eae6-4cdd-8ea3-23b1aafe6202"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3fd776b7-d9fa-429b-a540-643a0c00c8d6",
+                    "leftValue": "={{ $json.healthstatus }}",
+                    "rightValue": "Needs Attention",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3520,
+        1504
+      ],
+      "id": "56a4022b-1fd8-4a63-abe3-85415a06fc87",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"calculation_scratchpad\",\n    \"companyid\",\n    \"companyname\",\n    \"primarycontactemail\",\n    \"accounttimezone\",\n    \"slatier\",\n    \"supporttier\",\n    \"onboardingphase\",\n    \"lifecyclestage\",\n    \"kpistatus\",\n    \"invalidreasons\",\n    \"waumauwarning\",\n    \"scenario_matched\",\n    \"healthstatus\",\n    \"healthscore\",\n    \"churnriskscore\",\n    \"action\",\n    \"outreachtiming\",\n    \"startobservationwindow\",\n    \"observationwindowdays\",\n    \"withinobservationwindow\",\n    \"notificationstatus\",\n    \"escalationreason\",\n    \"risksignals\",\n    \"metrics\",\n    \"thresholdflags\",\n    \"reason\",\n    \"analysis\",\n    \"churnriskscoreprev\",\n    \"churnriskreasonprev\"\n  ],\n  \"properties\": {\n    \"calculation_scratchpad\": { \"type\": \"string\" },\n    \"companyid\": { \"type\": \"string\" },\n    \"companyname\": { \"type\": \"string\" },\n    \"primarycontactemail\": { \"type\": [\"string\", \"null\"] },\n    \"accounttimezone\": { \"type\": [\"string\", \"null\"] },\n    \"slatier\": { \"type\": [\"string\", \"null\"] },\n    \"supporttier\": { \"type\": [\"string\", \"null\"] },\n    \"onboardingphase\": { \"type\": [\"string\", \"null\"] },\n    \"lifecyclestage\": { \"type\": [\"string\", \"null\"] },\n    \"kpistatus\": { \"type\": \"string\", \"enum\": [\"PASS\", \"FAIL\", \"NONE\", \"INVALID\"] },\n    \"invalidreasons\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"waumauwarning\": { \"type\": [\"string\", \"null\"] },\n    \"scenario_matched\": { \"type\": \"string\", \"enum\": [\"A\", \"B\", \"C\", \"D\", \"E\", \"NONE\"] },\n    \"healthstatus\": { \"type\": [\"string\", \"null\"] },\n    \"healthscore\": { \"type\": [\"number\", \"null\"] },\n    \"churnriskscore\": { \"type\": [\"number\", \"null\"] },\n    \"action\": { \"type\": \"string\", \"enum\": [\"NO_ACTION\", \"AI_OUTREACH\", \"ESCALATE_TO_RON\"] },\n    \"outreachtiming\": { \"type\": \"string\", \"enum\": [\"none\", \"IMMEDIATE\"] },\n    \"startobservationwindow\": { \"type\": \"boolean\" },\n    \"observationwindowdays\": { \"type\": \"number\" },\n    \"withinobservationwindow\": { \"type\": \"boolean\" },\n    \"notificationstatus\": { \"type\": \"string\" },\n    \"escalationreason\": { \"type\": [\"string\", \"null\"] },\n    \"risksignals\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"metrics\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"weeklyactiveusers\",\n        \"monthlyactiveusers\",\n        \"paidseats\",\n        \"stickinessratioraw\",\n        \"stickinessratio\",\n        \"seatutilizationraw\",\n        \"seatutilization\",\n        \"wauutilizationraw\",\n        \"wauutilization\",\n        \"formslast7d\",\n        \"formslast14d\",\n        \"formslast21d\",\n        \"adminloginlast7d\",\n        \"adminloginlast14d\",\n        \"adminloginlast21d\",\n        \"dayssincelastform\",\n        \"dayssincelastformdisplay\",\n        \"adminengagementdays\"\n      ],\n      \"properties\": {\n        \"weeklyactiveusers\": { \"type\": \"number\" },\n        \"monthlyactiveusers\": { \"type\": \"number\" },\n        \"paidseats\": { \"type\": \"number\" },\n        \"stickinessratioraw\": { \"type\": \"number\" },\n        \"stickinessratio\": { \"type\": \"string\" },\n        \"seatutilizationraw\": { \"type\": \"number\" },\n        \"seatutilization\": { \"type\": \"string\" },\n        \"wauutilizationraw\": { \"type\": \"number\" },\n        \"wauutilization\": { \"type\": \"string\" },\n        \"formslast7d\": { \"type\": \"number\" },\n        \"formslast14d\": { \"type\": \"number\" },\n        \"formslast21d\": { \"type\": \"number\" },\n        \"adminloginlast7d\": { \"type\": \"number\" },\n        \"adminloginlast14d\": { \"type\": \"number\" },\n        \"adminloginlast21d\": { \"type\": \"number\" },\n        \"dayssincelastform\": { \"type\": [\"number\", \"null\"] },\n        \"dayssincelastformdisplay\": { \"type\": \"string\" },\n        \"adminengagementdays\": { \"type\": \"number\" }\n      }\n    },\n    \"thresholdflags\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\"formsyellow\", \"formsred\", \"adminyellow\", \"adminred\", \"wauyellow\", \"waured\"],\n      \"properties\": {\n        \"formsyellow\": { \"type\": \"boolean\" },\n        \"formsred\": { \"type\": \"boolean\" },\n        \"adminyellow\": { \"type\": \"boolean\" },\n        \"adminred\": { \"type\": \"boolean\" },\n        \"wauyellow\": { \"type\": \"boolean\" },\n        \"waured\": { \"type\": \"boolean\" }\n      }\n    },\n    \"reason\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\"summary\", \"context\", \"evidence\", \"nextstep\"],\n      \"properties\": {\n        \"summary\": { \"type\": [\"string\", \"null\"] },\n        \"context\": { \"type\": [\"string\", \"null\"] },\n        \"evidence\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n        \"nextstep\": { \"type\": \"string\" }\n      }\n    },\n    \"analysis\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\"trendlabel\", \"usagepattern\", \"anomaliesdetected\", \"contextnote\", \"summary\"],\n      \"properties\": {\n        \"trendlabel\": { \"type\": \"string\", \"enum\": [\"Improving\", \"Stable\", \"Gradual Decline\", \"Sudden Deterioration\", \"N/A\", \"No Data\"] },\n        \"usagepattern\": { \"type\": \"string\", \"enum\": [\"Consistent Usage\", \"Sporadic Usage\", \"Declining Usage\", \"Full Disengagement\", \"N/A\"] },\n        \"anomaliesdetected\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n        \"contextnote\": { \"type\": [\"string\", \"null\"] },\n        \"summary\": { \"type\": [\"string\", \"null\"] }\n      }\n    },\n    \"churnriskscoreprev\": { \"type\": [\"number\", \"null\"] },\n    \"churnriskreasonprev\": { \"type\": [\"string\", \"null\"] }\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1616,
+        1632
+      ],
+      "id": "7df40ade-0739-4cb6-bf06-6c11e3561e5e",
+      "name": "Structured Output Parser",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({ json: item.json.output }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        1408
+      ],
+      "id": "b79e01aa-2049-48b9-89f1-70567a1f197c",
+      "name": "Unwrap Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ══════════════════════════════════════════════════════════════\n// Code in JavaScript5 — Unified Cleaner + Mapper\n// ══════════════════════════════════════════════════════════════\n\n// ─── 0. Drop all skipped records ───\nconst validItems = $input.all().filter(item => !item.json.skipai);\n\n// ─── 1. Deduplicate by companyid — keep the richest record ───\nconst countNonNull = (obj) =>\n  Object.values(obj).filter(v => v !== null && v !== undefined).length;\n\nconst seen = new Map();\n\nfor (const item of validItems) {\n  const d = item.json;\n  const id = d.companyid || d.company_id;\n\n  if (!id) continue;\n\n  if (!seen.has(id)) {\n    seen.set(id, item);\n  } else {\n    const existing = seen.get(id);\n    if (countNonNull(d) > countNonNull(existing.json)) {\n      seen.set(id, item);\n    }\n  }\n}\n\n// ─── 2. Clean ASCII control characters function ───\nconst clean = (value) => {\n  if (typeof value === 'string') return value.replace(/[\\x00-\\x1F]/g, '');\n  if (Array.isArray(value))      return value.map(clean);\n  if (value && typeof value === 'object') {\n    const out = {};\n    for (const k of Object.keys(value)) out[k] = clean(value[k]);\n    return out;\n  }\n  return value;\n};\n\n// ─── 3. Map Fields and Sanitise (Final Output Generation) ───\nreturn [...seen.values()].map(item => {\n  const data = clean(item.json);\n\n  // Helper to strictly define the recency string\n  let displayString = data.days_since_last_form_display;\n  let rawDays = data.days_since_last_form;\n\n  // Enforce \"Today\" vs \"Never\" at the data level\n  if (rawDays === 0 || rawDays === \"0\") {\n      rawDays = 0;\n      displayString = \"Today\";\n  } else if (rawDays == null || rawDays === \"\") {\n      rawDays = null;\n      displayString = \"Never\";\n  }\n\n  return {\n    json: {\n      // ID & Identity\n      company_id: String(data.companyid || data.company_id || \"MISSING_ID\"),\n      company_name: data.company_name || \"Unknown Company\",\n      domain: data.domain || \"\",\n      \n      // Metadata\n      account_timezone: data.accounttimezone || data.account_timezone || \"UTC\",\n      lifecycle_stage: data.lifecyclestage || data.lifecycle_stage || \"Customer\",\n      onboarding_phase: data.onboardingphase || data.onboarding_phase || \"Completed\",\n      sla_tier: data.slatier || data.sla_tier || \"Standard\",\n      support_tier: data.supporttier || data.support_tier || \"Standard\",\n      \n      // Critical Math Fields (Converting nulls to numbers to pass AI validation)\n      paid_seats: Number(data.paidseats ?? data.paid_seats ?? 0), \n      weekly_active_users: Number(data.WAU ?? data.weekly_active_users ?? 0),\n      monthly_active_users: Number(data.monthly_active_users ?? 0),\n      forms_last_21d: Number(data.forms_last_21d ?? 0),\n      \n      // Support KPI Fields\n      forms_last_7d: Number(data.forms_last_7d ?? 0),\n      forms_last_14d: Number(data.forms_last_14d ?? 0),\n      \n      // The patched Recency mapping:\n      days_since_last_form: rawDays,\n      days_since_last_form_display: displayString,\n      \n      admin_login_last_7d: Number(data.admin_login_last_7d ?? 0),\n      admin_login_last_14d: Number(data.admin_login_last_14d ?? 0),\n      admin_login_last_21d: Number(data.admin_login_last_21d ?? 0),\n      \n      // History & Outreach\n      last_outreach_date: data.last_outreach_date || null,\n      primary_contact_email: data.primary_contact_email || null,\n      churn_risk_score_prev: Number(data.churnriskscoreprev ?? data.churn_risk_score_prev ?? 0),\n      churn_risk_reason_prev: data.churnriskreasonprev || data.churn_risk_reason_prev || \"None\"\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        1312
+      ],
+      "id": "cc64a63f-4e2d-4658-9288-4be331f17683",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "35e4c084-1502-4aee-bdc5-da7bb37a0bf7",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "NO_ACTION",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2048,
+        1408
+      ],
+      "id": "ca70f4d6-bf2f-4c5e-8c99-7d62d4425190",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "content": "Entry point for Customer Health monitoring.\n\nRuns on schedule to evaluate all active companies.\n\nPulls raw engagement signals from Amplitude:\n- Weekly Active Users (WAU)\n- Monthly Active Users (MAU)\n- Forms Submitted (7d / 14d / 21d)\n- Admin Login Activity\n\nEach Code node normalizes raw Amplitude responses\ninto a consistent company-level JSON structure.\n\nMerge layer combines all signal streams into ONE\nunified object per company.\n\nGuarantees:\n- One row per company\n- All metrics aligned\n- No duplication\n- Clean dataset for scoring\n\nNo health scoring or decisions happen here.\n\nOutput:\nUnified usage dataset → ready for KPI calculation.",
+        "height": 992,
+        "width": 1744
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        928
+      ],
+      "id": "e2f1a9fb-686f-4525-9518-c2d425748411",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "All usage signals from the previous stage are first\nenriched with HubSpot data.\n\nHubSpot is the system of record and provides:\n- Primary contact email\n- Account timezone\n- SLA tier\n- Lifecycle stage\n- Contact roles\n\nIf data conflicts exist, HubSpot wins.\n\nAfter enrichment, the system calculates:\n\n- health_score\n- churn_risk_score\n- health_status\n- risk_signals\n- action (NO_ACTION / AI_OUTREACH / ESCALATE_TO_RON)\n\nNo communication happens here.\n\nOutput:\nFully enriched and classified company record\n→ ready for routing.",
+        "height": 992,
+        "width": 1264,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        736,
+        928
+      ],
+      "id": "cab601bd-7f30-407d-98aa-b2ad83b31bff",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Generates contextual communication based on kpi_data.action:\n\n- HTML email (AI_OUTREACH only)\n- Slack notification (always)\n\nUses actual KPI metrics and risk signals.\nNo scoring or decision changes occur here.\n\nExecutes external tools:\n\n- Gmail → only if AI_OUTREACH and email exists\n- Slack → always\n\nEach tool is called at most once per company.\nFailures are logged but do not stop processing.\n\nProcessing occurs one company at a time\nto prevent uncontrolled LLM or tool execution.\n\nOutput:\nCompany record with communication results attached.",
+        "height": 992,
+        "width": 1636,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        896
+      ],
+      "id": "deb740ae-bf8f-4339-82f0-641ab10deb78",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Stores finalized company state in the Data Table.\n\nPersists:\n- health_status\n- health_score\n- churn_risk_score\n- action taken\n- observation window state\n- outreach timestamps\n\nAfter persistence, updates external operational systems:\n\n- HubSpot (write back health status, risk score, action history)\n- Asana (create or update task when escalation is required)\n\nThis layer ensures:\n- Single source of operational truth\n- No duplicate escalations\n- Audit trail for all actions taken\n\nNo scoring.\nNo communication generation.\n\nOutput:\nSystem-of-records fully synchronized.",
+        "height": 976,
+        "width": 1636,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3648,
+        912
+      ],
+      "id": "99da69be-baa8-4492-b64d-a989ac6c7bd8",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=====================================\nCUSTOMER HEALTH AGENT - CALCULATOR\n====================================\n\nIMPORTANT:\nThis execution processes EXACTLY ONE company.\nThe input is a single JSON object.\nEvaluate this company strictly on its own merits based on the rules below.\nReturn a single JSON object matching the requested schema.\n\nKEEP ALL TEXT FIELDS CONCISE. Summaries max 2 sentences. Context max 2 sentences. No verbose explanations.\n\nROLE\nYou are the Customer Health Calculator.\nYour ONLY responsibility is to:\n\n1. Validate incoming company data\n2. Calculate exact metrics\n3. Calculate health scores and churn risk scores\n4. Classify health status\n5. Build threshold flags and risk signals\n6. Determine actions and observation windows\n7. Perform trend, pattern, and anomaly analysis\n8. Return a structured JSON object containing all of the above.\n\nYou do NOT write emails.\nYou do NOT write Slack messages.\nYou do NOT send anything.\nYou do NOT make up data.\nYou do NOT override formulas.\nYou do NOT estimate or infer missing values.\n(A downstream system handles all communication after you output the JSON).\n\n====================================\nABSOLUTE BANNED STRINGS\n--- NEVER OUTPUT THESE\n====================================\n\nThe following strings are COMPLETELY FORBIDDEN in ANY field including\nrisksignals, evidence, reason, and analysis.\nIf you are about to write any of these — STOP and omit it entirely.\n\nBANNED PATTERNS (block any string matching these, case-insensitive):\n- Contains \"Admin inactive\"\n- Contains \"admin inactive\"\n- Contains \"Forms inactive\"\n- Contains \"forms inactive\"\n- Contains \"inactive for 0 days\"\n- Contains \"inactive for Never\"\n- Contains \"Admin login missing\"\n- Contains \"admin login missing\"\n- Contains \"Login missing\"\n- Contains \"login missing\"\n- Contains \"login last\"\n- Contains \"admin engagement\"\n- Contains \"Forms last 14\"\n- Contains \"Forms last 21 days is\"\n- Contains \"days is zero\"\n- Contains \"Admin login last 14\"\n- Contains \"Admin login last 21\"\n\nThese signals DO NOT EXIST in this system.\nThe ONLY valid signals are those defined in Step 5.\nNever invent signal wording outside of Step 5.\n\n====================================\nINPUT FORMAT\n====================================\n\nINPUT DATA:\n{{ JSON.stringify($json) }}\n\nCRITICAL INPUT RULES:\n- Missing formslast7d or formslast14d → use 0.\n- Missing adminlogin fields → use 0.\n- adminengagementdays = 0 always.\n- lifecyclestage containing \"Churn\" → treated as a special lifecycle in STEP 6\n  (kpistatus = \"NONE\", action = \"NO_ACTION\"), but you MUST still calculate\n  metrics, threshold flags, risk signals, and analysis using all steps below.\n- monthlyactiveusers = 0 → stickinessratioraw = 0.\n- paidseats = 0 → seatutilizationraw = 0 and wauutilizationraw = 0.\n- dayssincelastform = null → CHECK 10 = NO and CHECK G = NO. Skip entirely.\n- formslast7d and formslast14d are ONLY used for thresholdflags in STEP 4.\n  You MUST NOT use formslast7d or formslast14d in ANY health checks,\n  churn checks, or risksignals. All form-activity checks MUST use ONLY\n  formslast21d and dayssincelastform.\n\n====================================\nPRE-COMPUTATION ABSOLUTE OVERRIDES\n====================================\n\nOVERRIDE A — FORMS SIGNAL GATE (HARD BLOCK):\nEvaluate this FIRST for each company before any check, signal, or score computation.\n\n  Read formslast21d exactly as given in the input.\n  Is formslast21d == 0 EXACTLY?\n\n    YES (formslast21d is the number zero):\n      → \"No forms submitted in 21 days\" signal is ALLOWED (subject to normal rules)\n      → CHECK 7 is ALLOWED to fire\n      → CHECK E is ALLOWED to fire\n\n    NO (formslast21d is ANY number greater than zero, including 1, 2, 26, 45, 304, 360):\n      → \"No forms submitted in 21 days\" signal is PERMANENTLY BLOCKED\n      → CHECK 7 = NO (forced, regardless of any other condition)\n      → CHECK E = NO (forced, regardless of any other condition)\n      → Remove this signal from risksignals, escalationreason, and evidence\n      → dayssincelastform value is IRRELEVANT — do not use it to re-enable this signal\n\n====================================\nSTEP 0: CALCULATION SCRATCHPAD (MANDATORY)\n====================================\n\nBecause you must evaluate strict logic gates and math, you CANNOT do this in your head. \nYou MUST write out your logic in the \"calculation_scratchpad\" string field BEFORE populating the rest of the JSON.\nProve your math. Example format:\n\"Metrics: WAU is 2, MAU is 7, paidseats is 1, Forms is 63. \nScenarios: E? No, WAU/MAU is 2/7 (0.28 < 0.40). A/B/C/D? No, MAU > 0, WAU > 0. Routing to 3B.\nChecks: WAU (2) < MAU*0.20 (1.4)? False. MAU (7) < paidseats*0.50 (0.5)? False. \nSignals builder: WAU is 2 (not 0) -> no signal 1. MAU is 7 (not 0) -> no signal 2. Stickiness 0.28 > 0.20 -> no signal 3. Seat util 7.0 > 0.50 -> no signal 4. forms > 0 -> no signal 5. Final risksignals array: []\"\n\n====================================\nSTEP 1: VALIDATE DATA\n====================================\n\nValidate ALL of the following for EACH company:\n\nHARD INVALID RULES:\n- companyid missing or empty\n- companyname missing or empty\n- paidseats not a number OR negative\n- weeklyactiveusers not a number OR negative\n- monthlyactiveusers not a number OR negative\n- formslast21d not a number\n\n⛔ IMPORTANT: Zero (0) is a valid number. A value of 0 for paidseats,\n   weeklyactiveusers, monthlyactiveusers, or formslast21d does NOT\n   trigger INVALID. ONLY trigger INVALID if the value is missing,\n   null (when a number is required), non-numeric string, or negative.\n\nWAU > MAU CHECK (soft warning only — NOT an invalidation):\n⛔ WAU > MAU is NOT a HARD INVALID rule. It NEVER triggers kpistatus=INVALID.\n   It is a soft anomaly flag only. Always proceed to calculation regardless.\n\nThis fires ONLY when weeklyactiveusers is STRICTLY GREATER THAN monthlyactiveusers.\nIf WAU ≤ MAU → waumauwarning MUST be null.\n\nIf weeklyactiveusers = 0:\n  waumauwarning = null   ← STOP.\nElse if weeklyactiveusers > monthlyactiveusers:\n  waumauwarning = \"WARNING: WAU > MAU - possible Amplitude window mismatch. Scores calculated but treat with caution.\"\nElse:\n  waumauwarning = null\n\nIf any HARD INVALID rule triggered:\n- kpistatus = \"INVALID\"\n- action = \"NO_ACTION\"\n- invalidreasons = [list all failed rules]\n- healthscore = null\n- churnriskscore = null\n- notificationstatus = \"INVALID_KPI - notify via Slack\"\n\n⛔ INVALID RECORD MINIMUM OUTPUT — MANDATORY:\n   Even for INVALID records, you MUST still return the full JSON structure.\n   DO NOT skip metrics, reason, or analysis for INVALID records.\n   Populate them as follows:\n   - metrics: copy all raw numeric fields directly from input exactly as given.\n     Set wauutilization = \"N/A\", seatutilization = \"N/A\", stickinessratio = \"N/A\".\n   - thresholdflags: set all to false.\n   - risksignals: []\n   - waumauwarning: null\n   - reason: { summary: null, context: null, evidence: [], nextstep: \"Continue monitoring\" }\n   - analysis: { trendlabel: \"N/A\", usagepattern: \"N/A\", anomaliesdetected: [],\n                 contextnote: null, summary: null }\n\n====================================\nSTEP 2: CALCULATE METRICS\n====================================\n\n⛔ MANDATORY FOR ALL RECORDS — including Scenario matches:\n   Even if a Scenario is matched in STEP 3A, you MUST still complete\n   STEP 2 to populate the metrics object for the final JSON output.\n   Scenario matching only determines scores and signals — it does NOT\n   excuse you from calculating and outputting the metrics object.\n\nstickinessratioraw = weeklyactiveusers / monthlyactiveusers\nIf monthlyactiveusers = 0 → stickinessratioraw = 0\nstickinessratio = ROUND(stickinessratioraw * 100) + \"%\"\n\nseatutilizationraw = monthlyactiveusers / paidseats\nIf paidseats = 0 → seatutilizationraw = 0\nseatutilization = ROUND(seatutilizationraw * 100) + \"%\"\n\nwauutilizationraw = weeklyactiveusers / paidseats\nIf paidseats = 0 → wauutilizationraw = 0\nwauutilization = ROUND(wauutilizationraw * 100) + \"%\"\n\n⛔ PAIDSEATS = 0 SEAT GATE — MANDATORY:\n   When paidseats = 0:\n   - seatutilizationraw = 0\n   - wauutilizationraw = 0\n   - seatutilization = \"0%\"\n   - wauutilization = \"0%\"\n   - CHECK 3 = YES (+10)  ← seatutilizationraw 0 < 0.80\n   - CHECK 4 = YES (+10)  ← seatutilizationraw 0 < 0.50\n   - CHECK D = YES (+10)  ← seatutilizationraw 0 < 0.50\n   - Signal #4 fires      ← \"Seat utilization 0% - below 50% threshold\"\n   - Scenario E CANNOT match (seatutilizationraw = 0 < 0.50 fails the gate)\n\n⛔ dayssincelastform = 0 → dayssincelastformdisplay = \"Today\"\n   dayssincelastform = null → dayssincelastformdisplay = \"Never\"\n   These are different. 0 ≠ null. Never write \"Never\" for a numeric 0 value.\n\nadminengagementdays = 0\n\n====================================\nSTEP 3: CALCULATE SCORES\n====================================\n\n⛔ STEP 3A — SCENARIO DECISION TREE (MANDATORY FIRST STEP)\n\nEvaluate scenarios in this EXACT order before any standard checks:\n\nSTEP 3A-1: Check Scenario E (healthy override — HIGHEST PRIORITY)\n\nIF ALL of the following are true:\n   weeklyactiveusers > 0\n   AND monthlyactiveusers > 0\n   AND formslast21d > 0\n   AND (dayssincelastform IS null OR dayssincelastform <= 28)\n   AND adminengagementdays == 0 (Zero is the REQUIRED passing value. Do not block Scenario E if this is 0)\n   AND stickinessratioraw >= 0.40\n   AND seatutilizationraw >= 0.50\n   AND paidseats >= 1 (Having 1 or more paid seats is perfectly valid and allows Scenario E to match)\n→ Scenario E MATCHES. Apply Scenario E results. Skip to STEP 4.\n⛔ Scenario E ADDITIONAL GATE:\n   IF paidseats == 0 → seatutilizationraw = 0 → seatutilizationraw < 0.50\n   → Scenario E CANNOT match when paidseats = 0. Continue to STEP 3A-2.\n\nIF Scenario E does NOT match → Continue to STEP 3A-2.\n\nSTEP 3A-2: Check Scenario A (fully dead)\n\nIF ALL of the following are true:\n   weeklyactiveusers == 0\n   AND monthlyactiveusers == 0\n   AND formslast21d == 0\n   AND (dayssincelastform IS null OR dayssincelastform == 0)\n   AND paidseats >= 1\n→ Scenario A MATCHES. Apply Scenario A results. Skip to STEP 4.\n\nIF Scenario A does NOT match → Continue to STEP 3A-2b.\n\nSTEP 3A-2b: WAU=0, MAU=0, formslast21d > 0 (Standard Check path)\n\nIF ALL of the following are true:\n   weeklyactiveusers == 0\n   AND monthlyactiveusers == 0\n   AND formslast21d > 0\n   AND paidseats >= 1\n→ Proceed directly to STEP 3B (standard checks).\n\nIF this branch does NOT match → Continue to STEP 3A-2c.\n\nSTEP 3A-2c: WAU=0, MAU>0, formslast21d > 0 (Standard Check path)\n\nIF ALL of the following are true:\n   weeklyactiveusers == 0\n   AND monthlyactiveusers > 0\n   AND formslast21d > 0\n   AND paidseats >= 1\n→ Proceed directly to STEP 3B (standard checks).\n\nIF this branch does NOT match → Continue to STEP 3A-3.\n\nSTEP 3A-3: Check Scenario B (WAU=0, MAU>0, no forms)\n\nIF ALL of the following are true:\n   weeklyactiveusers == 0\n   AND monthlyactiveusers > 0\n   AND formslast21d == 0\n   AND (dayssincelastform IS null OR dayssincelastform == 0)\n   AND paidseats >= 1\n→ Scenario B MATCHES. Apply Scenario B results. Skip to STEP 4.\n\nIF Scenario B does NOT match → Continue to STEP 3A-4.\n\nSTEP 3A-4: Scenario C vs D — Two-Step Branch\n\nIF weeklyactiveusers > 0 AND monthlyactiveusers == 0 AND paidseats >= 1:\n\n  Is formslast21d == 0?\n    YES →\n       Is dayssincelastform >= 28?\n         YES → SCENARIO D (long-term zero forms and zero MAU)\n         NO  → SCENARIO C (recent drop to zero MAU, no forms yet)\n    NO (formslast21d > 0) →\n       SCENARIO C (zero MAU but some recent form activity;\n       \"No forms submitted\" signal is NOT allowed per Override A)\n\nIF Scenario C or D does NOT match → Continue to STEP 3B.\n\n--- SCENARIO RESULTS REFERENCE ---\n\n⛔ CRITICAL — READ THIS BEFORE USING ANY SCENARIO RESULT:\n   Scenarios define SCORES ONLY (healthscore, churnriskscore, action).\n   risk_signals for ALL scenarios MUST be built dynamically in STEP 5.\n   After matching a scenario, you MUST still proceed to STEP 5 to evaluate\n   every signal condition against the actual computed values.\n\nScenario A results:\n  healthscore = 30 → \"Poor Health\"\n  churnriskscore = 50\n  action = ESCALATE_TO_RON\n\nScenario B results:\n  healthscore = 60 → \"Needs Attention\"\n  churnriskscore = 30\n  action = AI_OUTREACH\n\nScenario C results:\n  healthscore = 50 → \"Needs Attention\"\n  churnriskscore = 30\n  action = AI_OUTREACH\n\nScenario D results:\n  healthscore = 40 → \"Poor Health\"\n  churnriskscore = 40\n  action = ESCALATE_TO_RON\n  usagepattern = \"Declining Usage\"\n\nScenario E results:\n  healthscore = 100 → \"Good Health\"\n  churnriskscore = 0\n  action = NO_ACTION\n\n--- STEP 3B: STANDARD CHECKS (only if no scenario matched) ---\n\n⛔ CRITICAL MATH BLOCK: Did a Scenario (A, B, C, D, or E) match in Step 3A?\nYES → STOP. DO NOT calculate penalties. Use the exact scores from the Scenario.\nNO → Proceed with calculating penaltytotal below.\n\nStart: penaltytotal = 0\n\nCHECK 1:  Is weeklyactiveusers < (monthlyactiveusers * 0.40)?      → if YES: +10\nCHECK 2:  Is weeklyactiveusers < (monthlyactiveusers * 0.20)?      → if YES: +10\nCHECK 3:  Is monthlyactiveusers < (paidseats * 0.80)?              → if YES: +10\nCHECK 4:  Is monthlyactiveusers < (paidseats * 0.50)?              → if YES: +10\nCHECK 5:  Is weeklyactiveusers == 0?                               → if YES: +10\nCHECK 6:  Is monthlyactiveusers == 0?                              → if YES: +10\nCHECK 7:  Is formslast21d == 0?                                    → if YES: +10\nCHECK 8:  Is adminengagementdays > 14?                             → ALWAYS NO → +0\nCHECK 9:  Is adminengagementdays > 30?                             → ALWAYS NO → +0\nCHECK 10: Is dayssincelastform a NUMBER AND > 28?                  → if YES: +10\n\npenaltytotal = (count of YES checks) × 10\nhealthscore = MAX(0, 100 - penaltytotal)\n\n⛔ ABSOLUTE RULE: The healthscore and healthstatus in your final JSON MUST EXACTLY MATCH the calculated math above. You are strictly forbidden from manually lowering the score or changing the status just because a waumauwarning or anomaly is present.\n\n--- HEALTH STATUS ---\nhealthscore >= 80               → \"Good Health\"\nhealthscore >= 50 AND < 80      → \"Needs Attention\"\nhealthscore <= 40               → \"Poor Health\"\n\n--- KPI STATUS — ABSOLUTE RULE ---\n⛔ ONLY \"Good Health\" maps to kpistatus = \"PASS\".\n   \"Needs Attention\" → kpistatus = \"FAIL\"\n   \"Poor Health\"     → kpistatus = \"FAIL\"\n   NEVER assign kpistatus = \"PASS\" to any account that is not \"Good Health\".\n\n--- CHURN RISK SCORE ---\n\nStart: risktotal = 0\n\nCHECK A: Is weeklyactiveusers == 0?                                  → if YES: +10\nCHECK B: Is monthlyactiveusers == 0?                                 → if YES: +10\nCHECK C: Is weeklyactiveusers < (monthlyactiveusers * 0.20)?         → if YES: +10\nCHECK D: Is monthlyactiveusers < (paidseats * 0.50)?                 → if YES: +10\nCHECK E: Is formslast21d == 0?                                       → if YES: +10\nCHECK F: Is adminengagementdays > 30?                                → ALWAYS NO → +0\nCHECK G: Is dayssincelastform a NUMBER AND > 28?                     → if YES: +10\nCHECK H: Is onboardingphase == \"Active\" AND weeklyactiveusers == 0?  → ALWAYS NO → +0\n\nrisktotal = (count of YES checks) × 10\nchurnriskscore = MIN(100, risktotal)\n\n====================================\nSTEP 4: THRESHOLD FLAGS\n====================================\n\nformsyellow  = (formslast14d == 0)\nformsred     = (formslast21d == 0)\nadminyellow  = (adminloginlast14d == 0)\nadminred     = (adminloginlast21d == 0)\nwauyellow    = (weeklyactiveusers <= paidseats * 0.60)\nwaured       = (weeklyactiveusers <= paidseats * 0.40)\n\n====================================\nSTEP 5: BUILD RISK SIGNALS\n====================================\n\n⛔ PRE-STEP 5 VERIFICATION — MANDATORY BEFORE EVALUATING ANY SIGNAL:\n   You are now working only with actual computed values.\n   The scenario matched in Step 3A is IRRELEVANT here.\n   Read each value fresh from your Step 2 calculations.\n   Do NOT assume any signal fired just because it \"usually fires\" in this scenario.\n\n⛔ FINAL SIGNAL GATE:\n   Look at formslast21d. If it is ANY number greater than 0:\n   → Signal 5 \"No forms submitted in 21 days\" is REMOVED from your list entirely.\n   Only continue to evaluate Signal 5 if formslast21d is exactly 0.\n\nEvaluate in exact order. Add signal if condition is true. Stop after 5 signals total.\nDo NOT change wording. Replace [...] with actual calculated values.\n\n1. IF weeklyactiveusers == 0  ← EXACTLY zero. 1, 2, 3 etc. do NOT trigger this.\n   → \"Zero weekly active users\"\n   ⛔ Only add this if weeklyactiveusers in metrics is exactly 0.\n      If weeklyactiveusers > 0, do NOT add this signal under any circumstances.\n\n2. IF monthlyactiveusers == 0\n   → \"Zero monthly active users\"\n3. IF weeklyactiveusers < (monthlyactiveusers * 0.20)\n   → \"Stickiness ratio [stickinessratio] - below 20% threshold\"\n4. IF monthlyactiveusers < (paidseats * 0.50)\n   → \"Seat utilization [seatutilization] - below 50% threshold\"\n5. IF formslast21d == 0 EXACTLY\n   → \"No forms submitted in 21 days - last form: [dayssincelastformdisplay]\"\n6. IF dayssincelastform is a NUMBER AND dayssincelastform > 28\n   → \"Forms inactive for [dayssincelastformdisplay]\"\n7. IF onboardingphase == \"Active\" AND weeklyactiveusers == 0\n   → \"Onboarding stalled - zero active users\"\n\n====================================\nSTEP 6: DETERMINE ACTION\n====================================\n\nEvaluate in this EXACT order:\n\nIF lifecyclestage contains \"Churn\":\n  action = \"NO_ACTION\"\n  outreachtiming = \"none\"\n  startobservationwindow = false\n  observationwindowdays = 7\n  withinobservationwindow = false\n  escalationreason = null\n  notificationstatus = \"NONE\"\n  kpistatus = \"NONE\"\n\nELSE IF healthstatus = \"Good Health\":\n  action = \"NO_ACTION\"\n  outreachtiming = \"none\"\n  notificationstatus = \"NONE\"\n  startobservationwindow = false\n  observationwindowdays = 7\n  withinobservationwindow = false\n  escalationreason = null\n\nELSE IF healthstatus = \"Needs Attention\":\n  action = \"AI_OUTREACH\"\n  outreachtiming = \"IMMEDIATE\"\n  notificationstatus = \"PENDING - Outreach Agent to send\"\n  startobservationwindow = true\n  observationwindowdays = 7\n  withinobservationwindow = false\n  escalationreason = null\n\nELSE IF healthstatus = \"Poor Health\":\n  action = \"ESCALATE_TO_RON\"\n  outreachtiming = \"IMMEDIATE\"\n  notificationstatus = \"PENDING - Outreach Agent to send\"\n  startobservationwindow = true\n  observationwindowdays = 7\n  withinobservationwindow = false\n  escalationreason = \"health_score: [healthscore], churn_risk_score: [churnriskscore]. Signals: [risksignals joined by ', ']\"\n\n⛔ CONSTANTS — NEVER DEVIATE:\n   observationwindowdays = 7 in ALL cases.\n   withinobservationwindow = false in ALL cases.\n\n====================================\nSTEP 7: BUILD REASON\n====================================\n\nsummary:\n  IF action = \"NO_ACTION\" AND kpistatus = \"NONE\" → null\n  IF action = \"NO_ACTION\" → \"[companyname] is in good health with no active risk signals.\"\n  ELSE → \"[companyname] shows [healthstatus] - primary signal: [risksignals[0]]\"\n\ncontext:\n  IF action = \"NO_ACTION\" → null\n  ELSE → Include: weeklyactiveusers, monthlyactiveusers, stickinessratio,\n         seatutilization, formslast21d, dayssincelastformdisplay, adminloginlast21d.\n\nevidence:\n  IF risksignals = [] → evidence = []\n  ELSE → first 3 items from risksignals exactly as written.\n\nnextstep:\n  action = \"NO_ACTION\"        → \"Continue monitoring\"\n  action = \"AI_OUTREACH\"      → \"Send proactive email\"\n  action = \"ESCALATE_TO_RON\"  → \"Escalate to Ron\"\n\n====================================\nSTEP 8: TREND, PATTERN, AND ANOMALY ANALYSIS\n====================================\n\nIs action = \"NO_ACTION\"?\n\nYES →\n  trendlabel   = \"N/A\"\n  usagepattern = \"N/A\"\n  anomaliesdetected = []\n  contextnote  = null\n  STOP. Do not evaluate any other trend or pattern logic below.\n\nNO → Continue below.\n\ntrendlabel — choose ONE:\n- \"Improving\"              → scores improving vs prev\n- \"Stable\"                 → no significant change\n- \"Gradual Decline\"        → slow drop over time\n- \"Sudden Deterioration\"   → sharp drop; use when churnriskscoreprev=0 AND churnriskscore>0\n- \"No Data\"                → insufficient history\n- \"N/A\"                    → ONLY when action = NO_ACTION\n\nusagepattern — choose ONE:\n- \"Consistent Usage\"    → regular WAU/MAU activity\n- \"Sporadic Usage\"      → intermittent usage\n- \"Declining Usage\"     → usage dropping\n- \"Full Disengagement\"  → weeklyactiveusers = 0 AND formslast21d = 0\n- \"N/A\"                 → ONLY when action = NO_ACTION\n\nanomaliesdetected — array:\n⛔ When action = \"NO_ACTION\": anomaliesdetected = [] ALWAYS.\n   Do NOT evaluate WAU > MAU or any other anomaly for NO_ACTION companies.\n   waumauwarning on the root field is still populated — but anomaliesdetected\n   inside analysis must be [].\n- \"WAU > MAU - data inconsistency\"\n  → add ONLY when waumauwarning is NOT null\n- \"Seat utilization over 100% - possible data anomaly\"\n  → add when seatutilizationraw > 1.0 AND action ≠ \"NO_ACTION\"\n- \"No prior risk history - sudden first appearance\"\n  → ONLY when churnriskscoreprev = 0 AND churnriskscore >= 60\n\ncontextnote:\n  IF action = \"NO_ACTION\" → null\n  ELSE → brief situational note (max 1 sentence)\n\nsummary:\n  IF kpistatus = \"NONE\" → null\n  IF action = \"NO_ACTION\" → brief positive summary or null\n  ELSE → brief narrative of current situation (max 2 sentences)\n\n====================================\nOUTPUT FORMAT ENFORCEMENT\n====================================\n\nYou MUST return EXACTLY ONE valid JSON object.\nDo NOT return an array. Do NOT wrap the output in an \"output\" or \"results\" key.\nSimply output the flattened properties directly at the root of the JSON object exactly as specified below:\n\n{\n  \"calculation_scratchpad\": string,\n  \"companyid\": string,\n  \"companyname\": string,\n  \"primarycontactemail\": string|null,\n  \"accounttimezone\": string|null,\n  \"slatier\": string|null,\n  \"supporttier\": string|null,\n  \"onboardingphase\": string|null,\n  \"lifecyclestage\": string|null,\n  \"kpistatus\": \"PASS\"|\"FAIL\"|\"INVALID\"|\"NONE\",\n  \"invalidreasons\": string[],\n  \"waumauwarning\": string|null,\n  \"scenario_matched\": \"A\"|\"B\"|\"C\"|\"D\"|\"E\"|\"NONE\",\n  \"healthstatus\": \"Good Health\"|\"Needs Attention\"|\"Poor Health\"|null,\n  \"healthscore\": number|null,\n  \"churnriskscore\": number|null,\n  \"action\": \"NO_ACTION\"|\"AI_OUTREACH\"|\"ESCALATE_TO_RON\",\n  \"outreachtiming\": \"none\"|\"IMMEDIATE\",\n  \"startobservationwindow\": boolean,\n  \"observationwindowdays\": 7,\n  \"withinobservationwindow\": false,\n  \"escalationreason\": string|null,\n  \"notificationstatus\": string,\n  \"risksignals\": string[],\n  \"metrics\": {\n    \"weeklyactiveusers\": number,\n    \"monthlyactiveusers\": number,\n    \"paidseats\": number,\n    \"stickinessratioraw\": number,\n    \"stickinessratio\": string,\n    \"seatutilizationraw\": number,\n    \"seatutilization\": string,\n    \"wauutilizationraw\": number,\n    \"wauutilization\": string,\n    \"formslast7d\": number,\n    \"formslast14d\": number,\n    \"formslast21d\": number,\n    \"adminloginlast7d\": number,\n    \"adminloginlast14d\": number,\n    \"adminloginlast21d\": number,\n    \"dayssincelastform\": number|null,\n    \"dayssincelastformdisplay\": string,\n    \"adminengagementdays\": 0\n  },\n  \"thresholdflags\": {\n    \"formsyellow\": boolean,\n    \"formsred\": boolean,\n    \"adminyellow\": boolean,\n    \"adminred\": boolean,\n    \"wauyellow\": boolean,\n    \"waured\": boolean\n  },\n  \"reason\": {\n    \"summary\": string|null,\n    \"context\": string|null,\n    \"evidence\": string[],\n    \"nextstep\": string\n  },\n  \"analysis\": {\n    \"trendlabel\": string,\n    \"usagepattern\": string,\n    \"anomaliesdetected\": string[],\n    \"contextnote\": string|null,\n    \"summary\": string|null\n  },\n  \"churnriskscoreprev\": number|null,\n  \"churnriskreasonprev\": string|null\n}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1472,
+        1408
+      ],
+      "id": "5e91aab6-1445-4f70-a1a2-d4c7ef733c08",
+      "name": "Calculations",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d7bc26e3-2569-4b6c-8613-3cc9a9323623",
+              "leftValue": "=  {{ $json.data.length }} \n",
+              "rightValue": "=0",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4192,
+        1680
+      ],
+      "id": "70aebf70-6727-4aca-89dc-612ca9b589e6",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "content": "## 🕐 Island 2 — Daily 7-Day Observation Window Check\nRuns daily. Reads all Pending rows older than 7 days.\nCompares fresh Amplitude data against Day-0 values.\nAI writes Slack + Asana messages only for ESCALATE_TO_RON cases.\nEscalates to Ron (Asana + Slack) or marks as Recovered/No Response.",
+        "height": 236,
+        "width": 816,
+        "color": 4
+      },
+      "id": "de204f6d-20b3-48a6-a96e-004fa97654f4",
+      "name": "Sticky Note – Island ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOtqrheZHvN3hMba",
+          "mode": "list",
+          "cachedResultName": "Churn_Risk_Companies"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "keyValue": "={{ $json.user_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "company_name": "={{ $json.output[0].content[0].text.company_name }}",
+            "health_status": "={{ $json.output[0].content[0].text.health_status }}",
+            "health_score": "={{ $json.output[0].content[0].text.health_score }}",
+            "risk_score": "={{ $json.output[0].content[0].text.risk_score }}",
+            "Action": "={{ $json.output[0].content[0].text.day7_action }}",
+            "reasoning": "={{ $json.output[0].content[0].text.day7_outcome }}",
+            "slatier": "Premium"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "health_status",
+              "displayName": "health_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_score",
+              "displayName": "health_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "slatier",
+              "displayName": "slatier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "610b08e3-09a1-4114-86ad-17a8581f93f9",
+      "name": "Update Row – No Action1",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        928,
+        2176
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U09K0CQP709",
+          "mode": "list",
+          "cachedResultName": "sumit.siliconstream"
+        },
+        "text": "={{ $('Escalate or Recover?').item.json.output[0].content[0].text.slack_message }}",
+        "otherOptions": {}
+      },
+      "id": "b00af5e3-7fd1-4e20-a4f9-c52f324b748e",
+      "name": "Slack Ron – Escalation1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1152,
+        1984
+      ],
+      "webhookId": "1554bdbc-9c1c-4c2b-8b9e-630677523c11",
+      "executeOnce": true,
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "nffr3F4e1ZEp8q9L",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "9841955a-632c-4ed3-b303-225ac6a63555",
+      "name": "Daily 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -768,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOtqrheZHvN3hMba",
+          "mode": "list",
+          "cachedResultName": "Churn_Risk_Companies"
+        },
+        "orderBy": true
+      },
+      "id": "56c5defb-b194-4aa2-b5c7-9b90f24cde05",
+      "name": "Read All Pending Rows",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -544,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter: pass ONLY pending >7d + at-risk companies\n// Deduplicate by user_id (latest updatedAt wins)\nconst now = new Date().getTime();\n\nconst eligible = $input.all().filter(item => {\n  const row = item.json;\n  \n  // Must be pending >7 days AND notificationstatus != Escalated\n  const createdAt = new Date(row.createdAt || row.createdat || 0).getTime();\n  const isPending7d = (now - createdAt) > (7 * 24 * 60 * 60 * 1000); // 7 days ms\n  const notEscalated = (row.notificationstatus || row.notificationstatus === null || '').trim() !== 'Escalated';\n  \n  if (!isPending7d || !notEscalated) return false;\n  \n  // At-risk conditions (any of these)\n  const health = (row.health_status || row.healthstatus || '').trim();\n  const isPoorHealth = health === 'Poor Health';\n  const isNeedsAttn = health === 'Needs Attention';\n  \n  const reasoning = (row.reasoning || '').toLowerCase();\n  const noForms21d = reasoning.includes('no forms submitted in 21 days');\n  const zeroWAU = reasoning.includes('zero weekly active users');\n  const zeroMAU = reasoning.includes('zero monthly active users');\n  \n  return isPoorHealth || isNeedsAttn || noForms21d || zeroWAU || zeroMAU;\n});\n\n// Deduplicate by user_id — keep LATEST updatedAt\nconst seen = new Map();\nfor (const item of eligible) {\n  const uid = item.json.user_id || item.json.userid;\n  const updatedAt = new Date(item.json.updatedAt || item.json.updatedat || 0).getTime();\n  \n  if (!seen.has(uid) || updatedAt > seen.get(uid)._ms) {\n    seen.set(uid, { ...item, _ms: updatedAt });\n  }\n}\n\nconst deduped = Array.from(seen.values()).map(({ _ms, ...item }) => item);\n\nif (deduped.length === 0) {\n  return [{ \n    json: { \n      no_pending: true, \n      count: 0,\n      message: \"No pending >7d at-risk companies\"\n    } \n  }];\n}\n\nreturn deduped.map(item => ({ \n  json: { \n    ...item.json, \n    no_pending: false,\n    pending_count: deduped.length\n  } \n}));\n"
+      },
+      "id": "adbc1606-59bd-4e7a-b2ec-6b9f2ab171a0",
+      "name": "Filter Pending + Window Expired",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-pending-001",
+              "leftValue": "={{ $json.no_pending }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1a8e114a-b541-43cd-8a6f-33369ddef98a",
+      "name": "Any Rows to Check?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -96,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-2024-11-20",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-2024-11-20"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "====================================\nDAY-7 ESCALATION ANALYST\n====================================\n\nYou are the Day-7 Escalation Analyst for a Customer Health Agent.\nYou receive ONE company record from the data table.\nYou must do TWO things:\n1. Decide whether to escalate to Ron or not\n2. If escalating, write the Slack message and Asana notes\n\nINPUT:\n{{ JSON.stringify($json) }}\n\nAvailable fields:\n- user_id              — unique ID for the company row\n- company_name         — company name\n- health_status        — \"Poor Health\" | \"Needs Attention\" | \"Good Health\"\n- health_score         — 0–100 (lower = worse)\n- risk_score           — 0–100 (higher = worse)\n- reasoning            — JSON array string of reasons why this was flagged\n- slatier              — SLA tier (may be null)\n- Email                — contact email (may be null)\n- createdAt            — when the row was first created\n- updatedAt            — when the row was last updated\n\n====================================\nSTEP 1: ESCALATION DECISION\n====================================\n\nEscalate to Ron (day7_action = \"ESCALATE_TO_RON\") if ANY of these are true:\n  - health_status = \"Poor Health\"\n  - health_score <= 20\n  - risk_score >= 80\n  - reasoning contains \"No forms submitted in 21 days\"\n  - reasoning contains \"Zero weekly active users\"\n  - reasoning contains \"Zero monthly active users\"\n\nDo NOT escalate (day7_action = \"NO_ACTION\") if NONE of the above apply.\n\n====================================\nSTEP 2: IF ESCALATING — WRITE SLACK MESSAGE\n====================================\n\nOnly write if day7_action = \"ESCALATE_TO_RON\".\nUse Slack mrkdwn format. *bold* for labels. No HTML tags.\n\n🔴 *Escalation Alert: [company_name]*\n\nThis account has been flagged for human review.\n\n*Health Status:* [health_status] ([health_score]/100) | *Churn Risk:* [risk_score]/100\n*SLA Tier:* [slatier or \"Standard\"]\n\n*Reasons flagged:*\n[List each item from reasoning array as a bullet: • item]\n\n*Recommended action:* Direct outreach or account review required.\n\n👉 <https://app.asana.com/0/1211545180543239|View Asana Task>\n\n@Ron — Please review and take action.\n\nIf NOT escalating, set slack_message = null.\n\n====================================\nSTEP 3: IF ESCALATING — WRITE ASANA NOTES\n====================================\n\nOnly write if day7_action = \"ESCALATE_TO_RON\".\nPlain text only. No markdown symbols. Max 5 lines.\n\nEscalation Alert: [company_name]\nHealth: [health_status] ([health_score]/100) | Churn Risk: [risk_score]/100\nSLA Tier: [slatier or \"Standard\"]\nReasons: [reasoning items as comma-separated sentence]\nAction required: Direct outreach or account review.\n\nIf NOT escalating, set asana_notes = null.\n\n====================================\nOUTPUT FORMAT\n====================================\n\nReturn EXACTLY ONE valid JSON object. No wrapper. No array. No markdown fences. No extra keys.\n\n{\n  \"user_id\": string,\n  \"company_name\": string,\n  \"health_status\": string,\n  \"health_score\": number,\n  \"risk_score\": number,\n  \"day7_action\": \"ESCALATE_TO_RON\" | \"NO_ACTION\",\n  \"day7_outcome\": \"Needs Human\" | \"Monitoring Continues\",\n  \"slack_message\": string | null,\n  \"asana_notes\": string | null,\n  \"timestamp\": string\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 2000,
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema",
+              "name": "Day7Analysis",
+              "schema": "{\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"user_id\", \"company_name\", \"health_status\", \"health_score\", \"risk_score\", \"day7_action\", \"day7_outcome\", \"slack_message\", \"asana_notes\", \"timestamp\"], \"properties\": {\"user_id\": {\"type\": \"string\"}, \"company_name\": {\"type\": \"string\"}, \"health_status\": {\"type\": \"string\"}, \"health_score\": {\"type\": \"number\"}, \"risk_score\": {\"type\": \"number\"}, \"day7_action\": {\"type\": \"string\"}, \"day7_outcome\": {\"type\": \"string\"}, \"slack_message\": {\"type\": [\"string\", \"null\"]}, \"asana_notes\": {\"type\": [\"string\", \"null\"]}, \"timestamp\": {\"type\": \"string\"}}}"
+            }
+          },
+          "temperature": 0.2,
+          "topP": 1
+        }
+      },
+      "id": "6f59ecf0-bc5d-49f8-924c-846106476962",
+      "name": "AI Agent – Day-7 Analyser",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        128,
+        2080
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "q9gZmpdtFOHV8TIu",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const raw = item.json;\n  const text = raw.output?.[0]?.content?.[0]?.text || {};\n  \n  let parsed;\n  if (text && typeof text === 'object') {\n    parsed = text;\n  } else if (typeof text === 'string') {\n    try { parsed = JSON.parse(text); } catch(e) { parsed = {}; }\n  } else {\n    parsed = {};\n  }\n\n  return {\n    json: {\n      ...item.json, // keeps the original data flowing through\n      user_id:            parsed.user_id,\n      company_name:       parsed.company_name,\n      health_status:      parsed.health_status,\n      health_score:       parsed.health_score,\n      risk_score:         parsed.risk_score,\n      day7_action:        parsed.day7_action || 'NO_ACTION',\n      day7_outcome:       parsed.day7_outcome || 'Monitoring Continues',\n      day7_slack_message: parsed.slack_message || null,\n      day7_asana_notes:   parsed.asana_notes || null,\n      day7_timestamp:     parsed.timestamp || new Date().toISOString()\n    }\n  };\n});"
+      },
+      "id": "5c272d5f-de73-4374-8818-e2ba1bcf4e0d",
+      "name": "Unwrap Day-7 Agent Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "escalate-gate-001",
+              "leftValue": "={{ $json.day7_action }}",
+              "rightValue": "ESCALATE_TO_RON",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3672484c-25ab-49bf-a7ae-4bd2991bfe38",
+      "name": "Escalate or Recover?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOtqrheZHvN3hMba",
+          "mode": "list",
+          "cachedResultName": "Churn_Risk_Companies"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "keyValue": "={{ $json.user_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "health_status": "={{ $json.output[0].content[0].text.health_status }}",
+            "company_name": "={{ $json.output[0].content[0].text.company_name }}",
+            "risk_score": "={{ $json.output[0].content[0].text.risk_score }}",
+            "health_score": "={{ $json.output[0].content[0].text.health_score }}",
+            "reasoning": "={{ $json.output[0].content[0].text.day7_outcome }}",
+            "Action": "={{ $json.output[0].content[0].text.day7_action }}",
+            "slatier": "Basic"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "health_status",
+              "displayName": "health_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "health_score",
+              "displayName": "health_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "slatier",
+              "displayName": "slatier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "992581e4-3a5f-4626-ab3d-5dbf129c3720",
+      "name": "Update Row – Escalated",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        928,
+        1984
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"churnriskscore\": \"{{ $json.riskscore }}\",\n    \"churnriskreason\": \"{{ $json.reasoning }}\",\n    \"onboardingphase\": \"At Risk\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4640,
+        1488
+      ],
+      "id": "07158d20-01a8-402c-b515-d4f29c9538a2",
+      "name": "HTTP Request3",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "To9zDmcCHoNj6nMa",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "workspace": "1209182518219644",
+        "name": "={{ $('Insert row4').first().json.company_name }}:- High Risk",
+        "otherProperties": {
+          "assignee": "1211545213919991",
+          "notes": "=SLA Tier: {{ $('Insert row4').first().json.slatier || 'Basic' }}\nHealth Status: {{ $('Insert row4').first().json.health_status || 'Unknown' }}\nRisk Score: {{ $('Insert row4').first().json.risk_score || 'N/A' }}\nHealth Score: {{ $('Insert row4').first().json.health_score || 'N/A' }}\n\nReasoning:\n{{ $('Insert row4').first().json.reasoning || 'No reasoning provided' }}",
+          "projects": [
+            "1211545180543239"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        4416,
+        1680
+      ],
+      "id": "31ac6d87-59c8-46b4-8b08-1baaf2d458e0",
+      "name": "Create a task2",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://app.asana.com/api/1.0/workspaces/1209182518219644/tasks/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.company_name }} - Medium Risk"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3968,
+        1680
+      ],
+      "id": "0ada161d-6cd3-493e-bd4d-2638e40ff0cc",
+      "name": "Search Asana (HTTP)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d7bc26e3-2569-4b6c-8613-3cc9a9323623",
+              "leftValue": "=  {{ $json.data.length }} \n",
+              "rightValue": "=0",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4192,
+        1488
+      ],
+      "id": "3740755b-39ed-4dee-9731-f5ea515ddc9b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "workspace": "1209182518219644",
+        "name": "={{ $('Insert row3').item.json.company_name }}:- High Risk",
+        "otherProperties": {
+          "assignee": "1209182518219631",
+          "notes": "=SLA Tier: {{ $('Insert row3').item.json.slatier || 'Basic' }}\nHealth Status: {{ $('Insert row3').item.json.health_status || 'Unknown' }}\nRisk Score: {{ $('Insert row3').item.json.risk_score || 'N/A' }}\nHealth Score: {{ $('Insert row3').item.json.health_score || 'N/A' }}\n\nReasoning:\n{{ $('Insert row3').item.json.reasoning || 'No reasoning provided' }}",
+          "projects": [
+            "1211545180543239"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        4416,
+        1488
+      ],
+      "id": "0acd30fb-e520-40a0-8562-bd714265fc2d",
+      "name": "Create a task",
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://app.asana.com/api/1.0/workspaces/1209182518219644/tasks/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "asanaOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.company_name }} - High Risk"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3968,
+        1488
+      ],
+      "id": "9b770b3e-5353-4023-8d85-09bb55fef601",
+      "name": "Search Asana (HTTP)1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "asanaOAuth2Api": {
+          "id": "pabStILWBZPv8KtJ",
+          "name": "Asana account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item;\nconst data = item.json || {};\n\nconst tz = data.accounttimezone || 'America/New_York';\nconst nowUtc = new Date();\n\nlet localTime;\ntry {\n  localTime = new Date(nowUtc.toLocaleString('en-US', { timeZone: tz }));\n} catch (e) {\n  localTime = new Date(nowUtc.toLocaleString('en-US', { timeZone: 'America/New_York' }));\n}\n\nconst weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];\nconst localWeekday = weekdayNames[localTime.getDay()];\nconst localHour = localTime.getHours();\nconst localMinute = localTime.getMinutes();\n\nconst isWeekend = (localWeekday === 'Sat' || localWeekday === 'Sun');\nconst isPreferredDay = ['Tue', 'Wed', 'Thu'].includes(localWeekday);\nconst isPreferredHour = (localHour >= 9 && localHour < 11);\nconst canSendNow = !isWeekend;\nconst sendWindowPreferred = isPreferredDay && isPreferredHour;\n\nconst timeStr = `${String(localHour).padStart(2, '0')}:${String(localMinute).padStart(2, '0')}`;\nlet sendWindowCheck;\nif (isWeekend) {\n  sendWindowCheck = `${localWeekday} ${timeStr} ${tz} — weekend, email held`;\n} else if (sendWindowPreferred) {\n  sendWindowCheck = `${localWeekday} ${timeStr} ${tz} — within preferred window`;\n} else {\n  sendWindowCheck = `${localWeekday} ${timeStr} ${tz} — weekday, outside preferred hours`;\n}\n\nitem.json = {\n  ...data,\n  isweekend: isWeekend,\n  cansendnow: canSendNow,\n  sendwindowpreferred: sendWindowPreferred,\n  sendwindowcheck: sendWindowCheck,\n  localtimecomputed: nowUtc.toISOString(),\n};\n\nreturn item;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        1504
+      ],
+      "id": "979b770b-0adb-4230-af6b-527dbcd9f94c",
+      "name": "Code in JavaScript11"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-2024-11-20",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-2024-11-20"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=CUSTOMER HEALTH OUTREACH AGENT\n\nROLE\n\nYou are the Customer Health Outreach Agent.\n\nYour job:\n1. Read the health analysis from the Calculator Agent (one company at a time).\n2. Apply an immediate escalation override if contact email is missing.\n3. Use the precomputed timezone flags to respect client send windows.\n4. Decide whether an email should be drafted and/or sent (flags only).\n5. Draft a short, contextual HTML email when appropriate.\n6. Output a strict JSON object for the outreach log and data table.\n\nIMPORTANT:\n- You DO NOT call any tools. The Gmail node is handled in a separate n8n node.\n- You DO NOT draft Slack messages. Slack is handled downstream.\n- You ONLY set flags (emailgenerated, emailsent, emailskipreason) and content.\n\n────────────────────────────────────\nINPUT FORMAT\n────────────────────────────────────\n\nYou receive ONE JSON object like:\n\n- companyid\n- companyname\n- primarycontactemail (may be null)\n- accounttimezone\n- slatier\n- healthstatus           (\"Good Health\" | \"Needs Attention\" | \"Poor Health\")\n- healthscore            (number)\n- churnriskscore         (number)\n- risksignals[]          (array of strings)\n- reason.context         (string; must be passed through as-is)\n- action                 (\"NOACTION\" | \"AIOUTREACH\" | \"ESCALATETORON\")\n- kpistatus\n- isweekend              (boolean; precomputed)\n- cansendnow             (boolean; precomputed)\n- sendwindowpreferred    (boolean; precomputed)\n- sendwindowcheck        (string; precomputed)\n\nLegacy action values:\n- \"AI_OUTREACH\" ≡ \"AIOUTREACH\"\n- \"ESCALATE_TO_RON\" ≡ \"ESCALATETORON\"\n\nAlways normalize to: \"NOACTION\" | \"AIOUTREACH\" | \"ESCALATETORON\".\n\n────────────────────────────────────\nSTEP 1 – NORMALIZE ACTION & MISSING-EMAIL OVERRIDE\n────────────────────────────────────\n\n1. Normalize the incoming action:\n   - \"AI_OUTREACH\" → \"AIOUTREACH\"\n   - \"ESCALATE_TO_RON\" → \"ESCALATETORON\"\n   - \"NO_ACTION\" → \"NOACTION\"\n\n   Let baseAction = normalized action.\n\n2. Missing-email override (hard rule):\n   IF baseAction = \"AIOUTREACH\"\n      AND primarycontactemail is null, empty, or only whitespace\n   THEN:\n      finalaction = \"ESCALATETORON\"\n   ELSE:\n      finalaction = baseAction\n\nAll remaining logic MUST use finalaction, not the raw action.\n\n────────────────────────────────────\nSTEP 2 – EMAIL FLAGS (NO TOOL CALLS)\n────────────────────────────────────\n\nYou must decide:\n\n- emailgenerated : boolean\n- emailsent      : boolean\n- emailskipreason: string | null\n- emailsubject   : string | null\n- emailbody      : string | null\n\nApply the rules in this exact order:\n\nRULE 1 – Escalation or No Action\n- IF finalaction = \"ESCALATETORON\":\n    emailgenerated = false\n    emailsent      = false\n    emailsubject   = null\n    emailbody      = null\n    emailskipreason = \"Escalation - no email\"\n    STOP.\n\n- IF finalaction = \"NOACTION\":\n    emailgenerated = false\n    emailsent      = false\n    emailsubject   = null\n    emailbody      = null\n    emailskipreason = \"No Action\"\n    STOP.\n\nRULE 2 – Weekend block (AIOUTREACH)\n- IF finalaction = \"AIOUTREACH\"\n  AND isweekend = true:\n    emailgenerated = true\n    emailsent      = false\n    emailskipreason = \"Weekend - outside send window\"\n    (You STILL draft emailsubject and emailbody, for logging/queue.)\n    CONTINUE to STEP 3 to write the email content.\n\nRULE 3 – Weekday, AIOUTREACH\n- IF finalaction = \"AIOUTREACH\"\n  AND isweekend = false:\n\n  3a. IF primarycontactemail is null/empty:\n      emailgenerated = true\n      emailsent      = false\n      emailskipreason = \"No email address on file\"\n\n  3b. IF primarycontactemail is valid and non-empty\n      AND cansendnow = true:\n      emailgenerated = true\n      emailsent      = true\n      emailskipreason = null\n\n  (You draft emailsubject and emailbody in ALL AIOUTREACH cases.)\n\nCONSTRAINT:\n- This agent NEVER calls Gmail. emailsent is just a flag the\n  downstream Gmail node will interpret.\n\n────────────────────────────────────\nSTEP 3 – EMAIL CONTENT (AIOUTREACH ONLY)\n────────────────────────────────────\n\nIf finalaction is \"ESCALATETORON\" or \"NOACTION\":\n- emailsubject = null\n- emailbody   = null\n- Skip this step.\n\nIf finalaction is \"AIOUTREACH\":\n- ALWAYS draft emailsubject and emailbody\n  (even if emailsent = false because of weekend or missing email).\n\nSUBJECT LINE:\n- Short, human, specific to the situation.\n- Examples (adapt with real context):\n  - \"Quick check-in on your Caddy usage\"\n  - \"Noticed a drop in activity — can we help?\"\n  - \"Let’s make sure Caddy is working smoothly for your team\"\n\nWRITING RULES (STRICT):\n- Use plain language: \"weekly active users\", \"monthly active users\",\n  \"recent form submissions\", \"admin logins\".\n- Do NOT mention internal names like WAU, MAU, churnriskscore, etc.\n- Paragraph 1: Greet them and briefly say what you noticed\n  (e.g., lower usage, fewer forms, etc.).\n- Paragraph 2: Explain why this matters / what risk it suggests.\n- Paragraph 3: Ask 1–2 concrete questions or propose next step.\n- End with a clear CTA asking them to simply reply to this email.\n- Do NOT include any button, link, or Calendly URL.\n- Tone: calm, supportive, non-robotic.\n\nUse this HTML shell (keep structure and CSS, just fill content):\n\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <style>\n    body { margin: 0; padding: 0; background-color: #f4f4f5;\n           font-family: Arial, sans-serif; color: #1a1a1a; }\n    .wrapper { width: 100%; padding: 40px 16px; background-color: #f4f4f5; }\n    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff;\n                 border-radius: 8px; overflow: hidden;\n                 box-shadow: 0 2px 8px rgba(0,0,0,0.06); }\n    .header { background-color: #1a1a2e; padding: 24px 32px; }\n    .header h1 { margin: 0; color: #ffffff; font-size: 20px; }\n    .body { padding: 28px 32px 24px; }\n    .body p { font-size: 15px; line-height: 1.7; margin: 0 0 14px; }\n    .footer { padding: 14px 32px 20px; font-size: 12px; color: #9ca3af;\n              background-color: #f9fafb; }\n    .footer p { margin: 0; }\n  </style>\n</head>\n<body>\n  <div class=\"wrapper\">\n    <div class=\"container\">\n      <div class=\"header\">\n        <h1>Caddy</h1>\n      </div>\n      <div class=\"body\">\n        <p>Hi [First name or \"there\"],</p>\n        <p>[Paragraph 1 – what you noticed about their recent usage]</p>\n        <p>[Paragraph 2 – why this matters / what could be going wrong]</p>\n        <p>[Paragraph 3 – 1–2 questions or a clear offer of help]</p>\n        <p>Simply <strong>reply to this email</strong> and we'll get back to you shortly.</p>\n        <p>Best,<br>The Caddy team</p>\n      </div>\n      <div class=\"footer\">\n        <p>You’re receiving this because you have an active Caddy account.<br>\n        Unsubscribe | Privacy Policy</p>\n      </div>\n    </div>\n  </div>\n</body>\n</html>\n\nSet emailsubject and emailbody accordingly.\n\n────────────────────────────────────\nSTEP 4 – DATABASE MAPPING (datatablerow)\n────────────────────────────────────\n\nPopulate datatablerow as follows:\n\n- userid          = companyid\n- companyname     = companyname\n- Email           = primarycontactemail or null\n- healthstatus    = healthstatus\n- healthscore     = healthscore\n- riskscore       = churnriskscore\n- reasoning       = reason.context  (pass through EXACTLY; do not rewrite)\n- action          = finalaction\n- accounttimezone = accounttimezone\n- slatier         = slatier\n\nTimestamps:\n- observationwindowstart:\n    If finalaction in [\"AIOUTREACH\", \"ESCALATETORON\"]:\n      observationwindowstart = current ISO 8601 time\n    Else:\n      observationwindowstart = null\n\n- escalationdate:\n    If finalaction = \"ESCALATETORON\":\n      escalationdate = current ISO 8601 time\n    Else:\n      escalationdate = null\n\n- lastoutreachdate:\n    If emailsent = true:\n      lastoutreachdate = current ISO 8601 time\n    Else:\n      lastoutreachdate = null\n\nNotification + outcome:\n- IF finalaction = \"ESCALATETORON\":\n    notificationstatus = \"Escalated\"\n    outreachoutcome    = \"Needs Human\"\n\n- IF finalaction = \"AIOUTREACH\" AND emailsent = true:\n    notificationstatus = \"Pending\"\n    outreachoutcome    = \"Pending\"\n\n- IF finalaction = \"AIOUTREACH\" AND emailsent = false:\n    notificationstatus = \"Pending - No Email\"\n    outreachoutcome    = \"Pending - No Email\"\n\n- IF finalaction = \"NOACTION\":\n    notificationstatus = \"None\"\n    outreachoutcome    = \"None\"\n\n────────────────────────────────────\nFINAL VALIDATION\n────────────────────────────────────\n\nBefore returning:\n- If finalaction ≠ \"AIOUTREACH\":\n    emailsubject and emailbody MUST be null.\n- If emailsent = true:\n    emailskipreason MUST be null.\n- If emailsent = false:\n    emailskipreason MUST be a non-empty string.\n- reasoning MUST match reason.context from input, unmodified.\n- Output MUST be exactly one JSON object with { outreach, datatablerow }.\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 4000,
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema",
+              "name": "Communication",
+              "schema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\"outreach\", \"datatablerow\"],\n  \"properties\": {\n    \"outreach\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"timestamp\",\n        \"emailgenerated\",\n        \"emailsent\",\n        \"emailskipreason\",\n        \"emailsubject\",\n        \"emailbody\"\n      ],\n      \"properties\": {\n        \"timestamp\": {\n          \"type\": \"string\",\n          \"description\": \"Current ISO 8601 timestamp for this outreach event.\"\n        },\n        \"emailgenerated\": {\n          \"type\": \"boolean\",\n          \"description\": \"True if an email was drafted, even if not sent.\"\n        },\n        \"emailsent\": {\n          \"type\": \"boolean\",\n          \"description\": \"Flag for downstream Gmail node. True only for AIOUTREACH on weekday with valid email and cansendnow.\"\n        },\n        \"emailskipreason\": {\n          \"type\": [\"string\", \"null\"],\n          \"description\": \"Reason email was not sent, or null if emailsent = true.\"\n        },\n        \"emailsubject\": {\n          \"type\": [\"string\", \"null\"],\n          \"description\": \"Subject line for AIOUTREACH emails; null for ESCALATETORON/NOACTION.\"\n        },\n        \"emailbody\": {\n          \"type\": [\"string\", \"null\"],\n          \"description\": \"HTML email body for AIOUTREACH; null for ESCALATETORON/NOACTION.\"\n        }\n      }\n    },\n    \"datatablerow\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"userid\",\n        \"companyname\",\n        \"Email\",\n        \"healthstatus\",\n        \"healthscore\",\n        \"riskscore\",\n        \"reasoning\",\n        \"action\",\n        \"notificationstatus\",\n        \"lastoutreachdate\",\n        \"outreachoutcome\",\n        \"observationwindowstart\",\n        \"accounttimezone\",\n        \"slatier\",\n        \"emailsent\",\n        \"escalationdate\"\n      ],\n      \"properties\": {\n        \"userid\": { \"type\": \"string\" },\n        \"companyname\": { \"type\": \"string\" },\n        \"Email\": { \"type\": [\"string\", \"null\"] },\n        \"healthstatus\": {\n          \"type\": \"string\",\n          \"enum\": [\"Good Health\", \"Needs Attention\", \"Poor Health\"]\n        },\n        \"healthscore\": { \"type\": \"number\" },\n        \"riskscore\": { \"type\": \"number\" },\n        \"reasoning\": {\n          \"type\": \"string\",\n          \"description\": \"Pass-through of reason.context from Calculator Agent.\"\n        },\n        \"action\": {\n          \"type\": \"string\",\n          \"enum\": [\"NOACTION\", \"AIOUTREACH\", \"ESCALATETORON\"]\n        },\n        \"notificationstatus\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"None\",\n            \"Escalated\",\n            \"Pending\",\n            \"Pending - No Email\",\n            \"INVALIDKPI - notify via Slack\"\n          ]\n        },\n        \"lastoutreachdate\": {\n          \"type\": [\"string\", \"null\"],\n          \"description\": \"ISO timestamp if emailsent = true; else null.\"\n        },\n        \"outreachoutcome\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"None\",\n            \"Pending\",\n            \"Pending - No Email\",\n            \"Needs Human\",\n            \"Recovered\",\n            \"No Response\",\n            \"Wrong Signal\"\n          ]\n        },\n        \"observationwindowstart\": { \"type\": [\"string\", \"null\"] },\n        \"accounttimezone\": { \"type\": [\"string\", \"null\"] },\n        \"slatier\": { \"type\": [\"string\", \"null\"] },\n        \"emailsent\": { \"type\": \"boolean\" },\n        \"escalationdate\": { \"type\": [\"string\", \"null\"] }\n      }\n    }\n  }\n}\n"
+            }
+          },
+          "temperature": 0.2,
+          "topP": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        2496,
+        1504
+      ],
+      "id": "3c1f21b0-5c63-41ab-9e5e-56b674a2acda",
+      "name": "Communication",
+      "credentials": {
+        "openAiApi": {
+          "id": "q9gZmpdtFOHV8TIu",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "action-check",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "AIOUTREACH",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "weekend-check",
+              "leftValue": "={{ $json.isweekend }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cansend-check",
+              "leftValue": "={{ $json.cansendnow }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2848,
+        1504
+      ],
+      "id": "2836305c-fa5e-4c47-b94e-082b913ae360",
+      "name": "Timezone & Email Gate1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.output[0].content[0].text.datatablerow.Email }}",
+        "subject": "={{ $json.output[0].content[0].text.outreach.emailsubject }}",
+        "message": "={{ $json.output[0].content[0].text.outreach.emailbody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3072,
+        1488
+      ],
+      "id": "7a12f32e-35d6-4563-bb2a-87a01206960c",
+      "name": "Send AI Email1",
+      "webhookId": "f7d8e9c0-1b2a-3c4d-5e6f-7a8b9c0d1e2f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xm0kxM2S5ZTn5Yzw",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\nconst raw = $input.item.json;\n\nconst outputArr = raw.output ?? (Array.isArray(raw) ? raw : null);\nif (!outputArr || !Array.isArray(outputArr)) {\n  return [{ json: { error: 'No output array found', raw } }];\n}\n\nfor (const msg of outputArr) {\n  if (msg.type !== 'message' || msg.status !== 'completed') {}\n  else {\n    const contentArr = msg.content ?? [];\n    for (const block of contentArr) {\n      if (block.type !== 'output_text') {}\n      else {\n        const text = block.text;\n        if (!text || typeof text !== 'object') {}\n        else {\n          const outreach = text.outreach     ?? {};\n          const data     = text.datatablerow ?? text.data_table_row ?? {};\n\n          const now   = new Date().toISOString();\n          const fixTs = (ts) => (!ts || new Date(ts).getUTCFullYear() < 2025) ? now : ts;\n\n          const action = (data.action ?? 'NOACTION')\n            .trim().toUpperCase()\n            .replace('AI_OUTREACH',     'AIOUTREACH')\n            .replace('ESCALATE_TO_RON', 'ESCALATETORON')\n            .replace('NO_ACTION',       'NOACTION');\n\n          const email     = data.Email ?? data.primarycontactemail ?? null;\n          const emailSent = outreach.emailsent === true;\n          const hasEmail  = !!(email && email.trim().length > 0);\n\n          let notificationstatus, outreachoutcome;\n          if (action === 'ESCALATETORON') {\n            notificationstatus = 'Escalated';\n            outreachoutcome    = 'Needs Human';\n          } else if (action === 'AIOUTREACH' && emailSent) {\n            notificationstatus = 'Sent';\n            outreachoutcome    = 'Pending';\n          } else if (action === 'AIOUTREACH' && !emailSent && hasEmail) {\n            notificationstatus = 'Pending';\n            outreachoutcome    = 'Pending';\n          } else if (action === 'AIOUTREACH' && !emailSent && !hasEmail) {\n            notificationstatus = 'Pending - No Email';\n            outreachoutcome    = 'Pending - No Email';\n          } else {\n            notificationstatus = 'None';\n            outreachoutcome    = 'None';\n          }\n\n          results.push({\n            json: {\n              userid:                 data.userid      ?? null,\n              companyname:            data.companyname ?? data.company_name ?? null,\n              Email:                  email,\n              healthstatus:           data.healthstatus ?? null,\n              healthscore:            data.healthscore  ?? null,\n              riskscore:              data.riskscore    ?? null,\n              reasoning:              data.reasoning    ?? null,\n              action,\n              notificationstatus,\n              outreachoutcome,\n              timestamp:              fixTs(outreach.timestamp),\n              observationwindowstart: action !== 'NOACTION' ? fixTs(data.observationwindowstart) : null,\n              lastoutreachdate:       emailSent ? fixTs(data.lastoutreachdate) : null,\n              escalationdate:         action === 'ESCALATETORON' ? fixTs(data.escalationdate) : null,\n              accounttimezone:        data.accounttimezone ?? null,\n              slatier:                data.slatier         ?? null,\n              isweekend:              raw.isweekend          ?? false,\n              cansendnow:             raw.cansendnow         ?? false,\n              sendwindowpreferred:    raw.sendwindowpreferred ?? false,\n              sendwindowcheck:        raw.sendwindowcheck     ?? null,\n              emailgenerated:         outreach.emailgenerated  ?? false,\n              emailsent:              emailSent,\n              emailskipreason:        emailSent ? null : (outreach.emailskipreason ?? outreach.email_skip_reason ?? null),\n              emailsubject:           outreach.emailsubject ?? outreach.email_subject ?? null,\n              emailbody:              outreach.emailbody    ?? outreach.email_body    ?? null,\n              tools_called:           outreach.tools_called ?? [],\n            }\n          });\n        }\n      }\n    }\n  }\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3296,
+        1504
+      ],
+      "id": "89ce47e4-f498-4f12-a7e7-d76ddcb90a6c",
+      "name": "Code in JavaScript12"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "WAU",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Admin Insights",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Forms Submitted",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "MAU",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Admin Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript7": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Filter – Valid Company for AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot Search": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HubSpot Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge4": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Filter – Valid Company for AI": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WAU": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Insights": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAU": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Login": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Calculations",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row3": {
+      "main": [
+        [
+          {
+            "node": "Search Asana (HTTP)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row4": {
+      "main": [
+        [
+          {
+            "node": "Search Asana (HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forms Submitted": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Insert row3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert row4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Calculations",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unwrap Output": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Calculations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript11",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert row5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculations": {
+      "main": [
+        [
+          {
+            "node": "Unwrap Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Create a task2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row – No Action1": {
+      "main": [
+        []
+      ]
+    },
+    "Slack Ron – Escalation1": {
+      "main": [
+        []
+      ]
+    },
+    "Daily 8AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read All Pending Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Pending Rows": {
+      "main": [
+        [
+          {
+            "node": "Filter Pending + Window Expired",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Pending + Window Expired": {
+      "main": [
+        [
+          {
+            "node": "Any Rows to Check?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Rows to Check?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent – Day-7 Analyser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent – Day-7 Analyser": {
+      "main": [
+        [
+          {
+            "node": "Unwrap Day-7 Agent Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unwrap Day-7 Agent Output": {
+      "main": [
+        [
+          {
+            "node": "Escalate or Recover?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate or Recover?": {
+      "main": [
+        [
+          {
+            "node": "Update Row – Escalated",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Row – No Action1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row – Escalated": {
+      "main": [
+        [
+          {
+            "node": "Slack Ron – Escalation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Asana (HTTP)": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a task": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Asana (HTTP)1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript11": {
+      "main": [
+        [
+          {
+            "node": "Communication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Communication": {
+      "main": [
+        [
+          {
+            "node": "Timezone & Email Gate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timezone & Email Gate1": {
+      "main": [
+        [
+          {
+            "node": "Send AI Email1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send AI Email1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript12": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ded2b6f6-f941-440a-bbaf-7ff1d8fd0128",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ed9054be5a60a40f9bc4e3ee3b932937418f14706eb193ff214dded3eb350b8"
+  },
+  "id": "mA3jpO1xRocvq6gW",
+  "tags": []
+}

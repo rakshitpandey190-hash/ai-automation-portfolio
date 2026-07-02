@@ -1,0 +1,1941 @@
+{
+  "name": "Workflow3",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Replacement Worker Approval",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Would you like to approve this request?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Decline"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldName": "id",
+              "fieldType": "hiddenField"
+            },
+            {
+              "fieldName": "Manager_ID",
+              "fieldType": "hiddenField"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -64,
+        16
+      ],
+      "id": "161961d6-aaa9-4b03-ad4e-fce95a4e47c1",
+      "name": "On form submission",
+      "webhookId": "342ca560-4c1c-4107-9614-6bc9f6e0207a"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "048b0388-858c-423a-a537-e41074386033",
+              "leftValue": "={{ $('On form submission').item.json['Would you like to approve this request?'].toJsonString().toLowerCase() }}",
+              "rightValue": "\"approve\"",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2624,
+        16
+      ],
+      "id": "2c1dfb54-375f-45fd-af36-f83108f72dc1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "from": "+17029049330",
+        "to": "={{ $('Get a record').item.json[\"Phone (Formatted)\"].toJsonString() }}",
+        "message": "=Hello {{ $('Get a record').item.json[\"Full Name\"] }} This is to confirm that you will be covering the below shift.\n\n[Shift details]:\n-Start:{{ $('Code in JavaScript').item.json.Start.toDateTime().toFormat('MM/dd/yyyy : hh:mm a') }}\n\n-End:{{ $('Code in JavaScript').item.json.End.toDateTime().toFormat('MM/dd/yyyy : hh:mm a') }}\n\n-Location:{{ $('Get a record4').item.json['Location Name/Code'] }}\n\nIf you have any questions, please contact {{ $('Search records4').item.json['Manager Name'] }}. We appreciate your participation as a valued member of the Elite team.\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        4416,
+        -80
+      ],
+      "id": "9d0261f8-8b2c-4dee-898b-d74177dc2d67",
+      "name": "Send an SMS/MMS/WhatsApp message",
+      "executeOnce": true,
+      "credentials": {
+        "twilioApi": {
+          "id": "8DblD6EUWfZfahE6",
+          "name": "Twilio account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Search records5').item.json.id }}",
+            "Shift Approval": "approved "
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Worker Replaced",
+              "displayName": "Worker Replaced",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Shift Approval",
+              "displayName": "Shift Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "approved ",
+                  "value": "approved "
+                },
+                {
+                  "name": "disapproved ",
+                  "value": "disapproved "
+                },
+                {
+                  "name": "in progress",
+                  "value": "in progress"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Shift Status",
+              "displayName": "Shift Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "accepted",
+                  "value": "accepted"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Call-Off-History ID",
+              "displayName": "Call-Off-History ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3968,
+        -80
+      ],
+      "id": "6c1cc683-32a7-4ec6-915d-e1fc429bce38",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblaKBnLUSVwbVvCd",
+          "mode": "list",
+          "cachedResultName": "Employees",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblaKBnLUSVwbVvCd"
+        },
+        "filterByFormula": "={Full Name}= {{ $('If1').item.json[\"Worker Replaced\"].toJsonString() }}",
+        "returnAll": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3744,
+        -80
+      ],
+      "id": "e7527fb7-bd59-453a-9f34-8ed79cc22bb8",
+      "name": "Search records",
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteRecord",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "id": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        5088,
+        -368
+      ],
+      "id": "a6dd6741-aec6-4edf-98f0-e3a7184fe7e2",
+      "name": "Delete a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+17029049330",
+        "to": "={{ $('Update record').item.json.fields.Phone }}",
+        "message": "=Hello {{ $('Search records5').item.json['Full Name'] }}, \nThank you for your willingness to cover the shift for {{ $('Search records5').item.json['Worker Replaced'] }}.\nUnfortunately, the shift supervisor was not able to select you for this particular coverage.\nWe truly value your availability and will keep you in mind for future shift opportunities.\nIf you have any questions, please reach out to {{ $('Search records4').item.json['Manager Name'] }}.\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        3296,
+        112
+      ],
+      "id": "fc90a52e-ea10-4755-9b7f-08dfec3c9e33",
+      "name": "Send an SMS/MMS/WhatsApp message1",
+      "executeOnce": true,
+      "credentials": {
+        "twilioApi": {
+          "id": "8DblD6EUWfZfahE6",
+          "name": "Twilio account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Shift Approval": "disapproved ",
+            "id": "={{ $('Search records5').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Worker Replaced",
+              "displayName": "Worker Replaced",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Shift Approval",
+              "displayName": "Shift Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "approved ",
+                  "value": "approved "
+                },
+                {
+                  "name": "disapproved ",
+                  "value": "disapproved "
+                },
+                {
+                  "name": "in progress",
+                  "value": "in progress"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Shift Status",
+              "displayName": "Shift Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "accepted",
+                  "value": "accepted"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Call-Off-History ID",
+              "displayName": "Call-Off-History ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2848,
+        112
+      ],
+      "id": "c3ce58c4-5065-4af3-aa90-3856f29b490b",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblLIlqgEac4gHLKa",
+          "mode": "list",
+          "cachedResultName": "Managers",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblLIlqgEac4gHLKa"
+        },
+        "filterByFormula": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1280,
+        16
+      ],
+      "id": "847b9b37-7748-401e-8e30-5d11c190c6d0",
+      "name": "Search records1",
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "filterByFormula": "={Worker Replaced} = {{ $('Search records3').item.json[\"Worker Replaced\"].toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        4640,
+        -80
+      ],
+      "id": "1260d3d7-2603-498d-b1f2-fb837a0fdd05",
+      "name": "Search records2",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4864,
+        -272
+      ],
+      "id": "74bb6e41-b1ff-49ef-9220-951529563e0d",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        5088,
+        -176
+      ],
+      "id": "959ff907-8a39-4bab-b588-4ab57c99d971"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "filterByFormula": "={Worker Replaced} = {{ $json[\"Full Name\"].toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        832,
+        16
+      ],
+      "id": "736033b5-53da-4747-a5e2-c8fe047f0fbf",
+      "name": "Search records3",
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3b72f9db-8a7e-4d26-87a0-b0baef0804ce",
+              "leftValue": "={{ $json[\"Shift Approval\"].toJsonString().toLowerCase() }}",
+              "rightValue": "\"in progress\"",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        16
+      ],
+      "id": "47583557-13f7-403d-aa88-d9ea85d74c5f",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2db47ffd-5e88-4167-9c73-b32254fc627f",
+              "leftValue": "={{ $json?.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        16
+      ],
+      "id": "e83cad7a-9c93-4e53-b1f4-9475c580aa31",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblLIlqgEac4gHLKa",
+          "mode": "list",
+          "cachedResultName": "Managers",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblLIlqgEac4gHLKa"
+        },
+        "filterByFormula": "={Manager ID} = {{ $('On form submission').item.json.Manager_ID.toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1504,
+        16
+      ],
+      "id": "9ce55989-7245-4317-a149-6dc04d893cb5",
+      "name": "Search records4",
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblaKBnLUSVwbVvCd",
+          "mode": "list",
+          "cachedResultName": "Employees",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblaKBnLUSVwbVvCd"
+        },
+        "id": "={{ $json.id  ?? '' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        16
+      ],
+      "id": "e1cb514e-5c88-486e-aab8-0bbe4980158a",
+      "name": "Get a record",
+      "alwaysOutputData": false,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblaKBnLUSVwbVvCd",
+          "mode": "list",
+          "cachedResultName": "Employees",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblaKBnLUSVwbVvCd"
+        },
+        "id": "={{ $('On form submission').item.json.formQueryParameters.LeaveID  ?? '' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        608,
+        16
+      ],
+      "id": "630e91d3-c535-40c0-8f35-043e9f0c9ef2",
+      "name": "Get a record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\nreturn $input.all()?.filter(item => {\n  // Adjust the field names if different in your Airtable\n  const shiftStatus = item.json['Shift Status'];      // e.g., \"accepted\", \"rejected\", or empty/undefined\n  const shiftApproval = item.json['Shift Approval'];  // e.g., \"Approved\", \"Disapproved\", \"in Progress\"\n\n  // Has not replied means \"Shift Status\" is empty or undefined\n  // Not declined means \"Shift Approval\" is NOT \"Disapproved\"\n  const hasNotReplied = !shiftStatus; // falsy = not replied\n  const notDeclined = shiftApproval !== 'Disapproved';\n\n  return hasNotReplied && notDeclined;\n});\n\n} catch(e) {\n  return [{ json: { error: e.message } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4864,
+        16
+      ],
+      "id": "b5942df9-ad3d-441f-8815-32719a9060b1",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "from": "+17029049330",
+        "to": "={{ $json.Phone }}\n",
+        "message": "The request for shift coverage has been cancelled.\nThe shift has been filled.  \nThank you.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        5088,
+        16
+      ],
+      "id": "a2cdedc8-1ef1-4fe2-9886-ad92ba1ee018",
+      "name": "Send an SMS/MMS/WhatsApp message2",
+      "credentials": {
+        "twilioApi": {
+          "id": "8DblD6EUWfZfahE6",
+          "name": "Twilio account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBLbRr1z0ah2nSV",
+          "mode": "list",
+          "cachedResultName": "Matched Worker Data",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblBLbRr1z0ah2nSV"
+        },
+        "filterByFormula": "={Full Name} =  {{ $('Get a record').item.json[\"Full Name\"].toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2400,
+        16
+      ],
+      "id": "09e549a8-4b10-4670-93f1-89587ae905f7",
+      "name": "Search records5",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkkeeLvreccTrbf",
+          "mode": "list",
+          "cachedResultName": "Locations",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblkkeeLvreccTrbf"
+        },
+        "id": "={{ $json.Location.last()  ?? '' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2176,
+        16
+      ],
+      "id": "414831aa-8241-45fd-8810-4cb8659cac1a",
+      "name": "Get a record4",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblZQinqhYMlWX76f",
+          "mode": "list",
+          "cachedResultName": "Employee Shift",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tblZQinqhYMlWX76f"
+        },
+        "filterByFormula": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        16
+      ],
+      "id": "3a2c8cf6-2bc8-468d-892f-08e0dd6d1d79",
+      "name": "Search records7",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n// This code finds a specific employee's shift for a specific date.\n\n// --- Step 1: Get Data from Previous Nodes ---\n\n// Get the full record of the employee who called off.\nconst employeeRecord = $('Get a record1').first(); // <-- This line is corrected\n// If the employee isn't found in your database, stop.\nif (!employeeRecord) {\n  return [];\n}\nconst employeeId = employeeRecord.json.id;\n\n// --- Step 2: Define \"Today\" in Your Timezone ---\n\n// Use standard JavaScript to get today's date in 'dd/MM/yyyy' format for India.\nconst formatter = new Intl.DateTimeFormat('en-GB', {\n  timeZone: 'Asia/Kolkata',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit'\n});\nconst leaveDateStr = formatter.format(new Date());\n\n// --- Step 3: Filter All Shifts ---\n\n// Get the list of all shift records passed into this node.\nconst allShifts = $input.all();\n\nconst todaysShift = allShifts.filter(item => {\n  const shift = item.json;\n\n  // Condition 1: Check if the shift belongs to the correct employee.\n  // Your 'Employee' field is a linked record (an array of IDs), so we check if the ID is in the array.\n  const employeeMatch = Array.isArray(shift.Employee) && shift.Employee.includes(employeeId);\n\n  // If it's not the right employee, skip to the next item.\n  if (!employeeMatch) {\n    return false;\n  }\n\n  // Condition 2: Check if the shift's start date matches today's date.\n  const shiftStartDate = new Date(shift.Start);\n  const shiftDateStr = formatter.format(shiftStartDate); // Convert shift date to 'dd/MM/yyyy'\n  const dateMatch = (shiftDateStr === leaveDateStr);\n\n  // Keep the item only if BOTH the employee and the date match.\n  return dateMatch;\n});\n\n// Return the result: an array containing only the matching shift, or an empty array if no match was found.\nreturn todaysShift;\n} catch(e) {\n  return [{ json: { error: e.message } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        16
+      ],
+      "id": "b7fa03c4-9e60-468b-827c-9510660e6799",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbladWxvNnnzVW3AB",
+          "mode": "list",
+          "cachedResultName": "Call-Off History",
+          "cachedResultUrl": "https://airtable.com/appNiFmshJ1pRlVoS/tbladWxvNnnzVW3AB"
+        },
+        "filterByFormula": "={Call-Off ID} = {{ $json[\"Call-Off-History ID\"].toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2848,
+        -80
+      ],
+      "id": "2374286e-5bad-4252-852f-e0ed305a393b",
+      "name": "Search records6",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbladWxvNnnzVW3AB",
+          "mode": "list",
+          "cachedResultName": "Call-Off History",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI/tbladWxvNnnzVW3AB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Replacement Employee ID": "={{ [$('Get a record').item.json.id] }}",
+            "Time to Fill Position": "={{ $json.timeToApproveHours }}",
+            "Replacement Found": "={{ true }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Call-Off ID",
+              "displayName": "Call-Off ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Employee Name",
+              "displayName": "Employee Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Location ID",
+              "displayName": "Location ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Call-Off Date/Time",
+              "displayName": "Call-Off Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Shift Date/Time",
+              "displayName": "Shift Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Notice Period (Hours before shift)",
+              "displayName": "Notice Period (Hours before shift)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Replacement Found",
+              "displayName": "Replacement Found",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Replacement Employee ID",
+              "displayName": "Replacement Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Replacement Name",
+              "displayName": "Replacement Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Time to Fill Position",
+              "displayName": "Time to Fill Position",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Days Until Shift",
+              "displayName": "Days Until Shift",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Location Name",
+              "displayName": "Location Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3296,
+        -80
+      ],
+      "id": "e52a5e38-87c0-4051-9c15-ee95d78108e3",
+      "name": "Create or update a record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n// This code calculates the time difference in hours between two timestamps.\n\n// Get the approval submission time from the trigger node.\nconst submissionTimeStr = $('On form submission').first().json.submittedAt;\nconst submissionDate = new Date(submissionTimeStr);\n\n// Prepare an array to hold the output items.\nconst outputItems = [];\n\n// Loop through each record from the 'Search records6' node.\nfor (const item of $input.all()) {\n  // Get the original call-off time for the current record.\n  const callOffTimeStr = item.json['Call-Off Date/Time'];\n\n  // Check if both date strings are available before calculating.\n  if (callOffTimeStr && submissionTimeStr) {\n    const callOffDate = new Date(callOffTimeStr);\n\n    // Calculate the absolute difference in milliseconds.\n    const differenceMs = Math.abs(submissionDate - callOffDate);\n\n    // Convert the difference from milliseconds to hours.\n    const differenceHours = differenceMs / (1000 * 60 * 60);\n\n    // Add the result as a new field to the current item's JSON data.\n    // You can rename 'timeToApproveHours' to whatever you prefer.\n    item.json.timeToApproveHours = differenceHours;\n  }\n  \n  // Add the updated item to our output array.\n  outputItems.push(item);\n}\n\n// Return all the updated items to the next node in the workflow.\nreturn outputItems;\n} catch(e) {\n  return [{ json: { error: e.message } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        -80
+      ],
+      "id": "0fcc168e-04b3-4a80-a949-befd12eeb6a5",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "app7ziOSbbTGTjxyI",
+          "mode": "list",
+          "cachedResultName": "Call-Off Management",
+          "cachedResultUrl": "https://airtable.com/app7ziOSbbTGTjxyI"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblZQinqhYMlWX76f",
+          "mode": "list",
+          "cachedResultName": "Employee Shift",
+          "cachedResultUrl": "https://airtable.com/appaK5QI0d3R41Zkt/tblZQinqhYMlWX76f"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Call Off": true,
+            "Replacement": "={{ $json.fields[\"Replacement Employee ID\"] }}",
+            "id": "={{ $('Code in JavaScript').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Shift ID",
+              "displayName": "Shift ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Employee",
+              "displayName": "Employee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Location Type (from Location)",
+              "displayName": "Location Type (from Location)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Start",
+              "displayName": "Start",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "End",
+              "displayName": "End",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "ACTIVE",
+                  "value": "ACTIVE"
+                },
+                {
+                  "name": "CANCELLED",
+                  "value": "CANCELLED"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Hours",
+              "displayName": "Hours",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Call Off",
+              "displayName": "Call Off",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Replacement",
+              "displayName": "Replacement",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Employees",
+              "displayName": "Employees",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3520,
+        -80
+      ],
+      "id": "854c0d55-d3fa-49e9-8cc0-3d39e3f1a5e6",
+      "name": "Create or update a record2",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0xsiUJpOvKi2cuLK",
+          "name": "Airtable Personal Access Token account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Replacement Worker Update\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"><title>Replacement Worker Update</title><style>body{background:#f6f9fc;margin:0;font-family:Segoe UI,Arial,sans-serif}.container{max-width:600px;margin:32px auto;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.07)}.header{background:#b91c1c;color:#fff;padding:20px 28px;border-radius:8px 8px 0 0;text-align:center}.title{font-size:22px;font-weight:700;margin:0}.content{padding:28px;color:#334155}.footer{font-size:13px;color:#888;text-align:center;padding:22px;border-top:1px solid #e2e8f0}.details-box{border:1px solid #e2e8f0;border-radius:8px;padding:20px;background:#f8fafc}.details-box h4{margin:0 0 15px;font-size:16px;color:#334155}.details-box p{font-size:14px;color:#475569;margin:0 0 8px}.details-box p strong{color:#334155}</style></head><body><div class=\\\"container\\\"><div class=\\\"header\\\"><h2 class=\\\"title\\\">Replacement Worker Update</h2></div><div class=\\\"content\\\"><p style=\\\"font-size:16px;color:#334155;line-height:1.6;margin:0 0 20px 0;\\\">We appreciate your willingness to cover this shift. Unfortunately, the shift supervisor was not able to select you this time. We will keep you updated on any future shift opportunities.</p><h3 style=\\\"font-size:18px;font-weight:600;margin:0 0 20px;line-height:1.6;\\\">\" + ($('Search records4').item.json['Manager Name'] || '') + \" has declined \" + ($('Get a record').item.json['Full Name'] || '') + \"'s request to cover the below shift.</h3><div class=\\\"details-box\\\"><h4>Shift Details</h4><p><strong>Call-Off Worker:</strong> \" + ($('Get a record1').item.json['Full Name'] || '') + \"</p><p><strong>Shift Date:</strong> \" + $('Code in JavaScript').item.json.Start.toDateTime().toFormat('MM/dd/yyyy') + \"</p><p><strong>Shift Time:</strong> \" + $('Code in JavaScript').item.json.Start.toDateTime().toFormat('hh:mm a') + \"</p><p style=\\\"margin-bottom:0;\\\"><strong>Location:</strong> \" + ($('Get a record4').item.json['Location Name/Code'] || '') + \"</p></div><p style=\\\"margin-top:24px;color:#475569;\\\">Please contact <strong>\" + ($('Search records4').item.json['Manager Name'] || '') + \"</strong> if you have any questions.</p></div><div class=\\\"footer\\\">&copy; 2025 ESS Workforce Management</div></div></body></html>\" }, \"toRecipients\": $('Search records1').all().map(item => ({ emailAddress: { address: item.json.Email } })) }, \"saveToSentItems\": true }) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3072,
+        112
+      ],
+      "id": "a7f6f970-37c5-4be6-b329-0ab24fdb33e5",
+      "name": "Replacement Worker Update",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Replacement Worker Update\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"><title>Replacement Worker Update</title><style>body{background:#f6f9fc;margin:0;font-family:Segoe UI,Arial,sans-serif}.container{max-width:600px;margin:32px auto;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.07)}.header{background:#1d4ed8;color:#fff;padding:20px 28px;border-radius:8px 8px 0 0;text-align:center}.title{font-size:22px;font-weight:700;margin:0}.content{padding:28px;color:#334155}.footer{font-size:13px;color:#888;text-align:center;padding:22px;border-top:1px solid #e2e8f0}.details-box{border:1px solid #e2e8f0;border-radius:8px;padding:20px;background:#f8fafc}.details-box h4{margin:0 0 15px;font-size:16px;color:#334155}.details-box p{font-size:14px;color:#475569;margin:0 0 8px}.details-box p strong{color:#334155}</style></head><body><div class=\\\"container\\\"><div class=\\\"header\\\"><h2 class=\\\"title\\\">Replacement Worker Update</h2></div><div class=\\\"content\\\"><h3 style=\\\"font-size:18px;font-weight:600;margin:0 0 20px;line-height:1.6;\\\">\" + ($('Get a record').item.json['Full Name'] || '') + \" has been approved to cover the below shift.</h3><div class=\\\"details-box\\\"><h4>Shift Details</h4><p><strong>Call-Off Worker:</strong> \" + ($('Search records').item.json['Full Name'] || '') + \"</p><p><strong>Shift Date:</strong> \" + $today.format('MM/dd/yyyy') + \"</p><p><strong>Shift Time:</strong> \" + $('Code in JavaScript').item.json.Start.toDateTime().toFormat('hh:mm a') + \"</p><p style=\\\"margin-bottom:0;\\\"><strong>Location:</strong> \" + ($('Get a record4').item.json['Location Name/Code'] || '') + \"</p></div><p style=\\\"margin-top:24px;color:#475569;\\\">No further action is required for this shift.</p></div><div class=\\\"footer\\\">&copy; 2025 ESS Workforce Management</div></div></body></html>\" }, \"toRecipients\": $('Search records1').all().map(item => ({ emailAddress: { address: item.json.Email } })) }, \"saveToSentItems\": true }) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4192,
+        -80
+      ],
+      "id": "c9e41763-7763-4ab7-ac51-fffd1917afbd",
+      "name": "Replacement Worker Update1",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Replacement Worker Update\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"><title>Replacement Worker Update</title><style>body{background:#f6f9fc;margin:0;font-family:Segoe UI,Arial,sans-serif}.container{max-width:600px;margin:32px auto;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.07)}.header{background:#b91c1c;color:#fff;padding:20px 28px;border-radius:8px 8px 0 0;text-align:center}.title{font-size:22px;font-weight:700;margin:0}.content{padding:28px;color:#334155}.footer{font-size:13px;color:#888;text-align:center;padding:22px;border-top:1px solid #e2e8f0}.details-box{border:1px solid #e2e8f0;border-radius:8px;padding:20px;background:#f8fafc}.details-box h4{margin:0 0 15px;font-size:16px;color:#334155}.details-box p{font-size:14px;color:#475569;margin:0 0 8px}.details-box p strong{color:#334155}</style></head><body><div class=\\\"container\\\"><div class=\\\"header\\\"><h2 class=\\\"title\\\">Replacement Worker Update</h2></div><div class=\\\"content\\\"><h3 style=\\\"font-size:18px;font-weight:600;margin:0 0 20px;line-height:1.6;\\\">\" + ($('Search records4').item.json['Manager Name'] || '') + \" has declined \" + ($('Get a record').item.json['Full Name'] || '') + \"'s request to cover the below shift.</h3><div class=\\\"details-box\\\"><h4>Shift Details</h4><p><strong>Call-Off Worker:</strong> \" + ($('Get a record1').item.json['Full Name'] || '') + \"</p><p><strong>Shift Date:</strong> \" + $('Code in JavaScript').item.json.Start.toDateTime().toFormat('MM/dd/yyyy') + \"</p><p><strong>Shift Time:</strong> \" + $('Code in JavaScript').item.json.Start.toDateTime().toFormat('hh:mm a') + \"</p><p style=\\\"margin-bottom:0;\\\"><strong>Location:</strong> \" + ($('Get a record4').item.json['Location Name/Code'] || '') + \"</p></div><p style=\\\"margin-top:24px;color:#475569;\\\">Please contact <strong>\" + ($('Search records4').item.json['Manager Name'] || '') + \"</strong> if you have any questions.</p></div><div class=\\\"footer\\\">&copy; 2025 ESS Workforce Management</div></div></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"rakshit.siliconstream@gmail.com\" } }] }, \"saveToSentItems\": true }) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -64,
+        336
+      ],
+      "id": "96e9b615-0089-4152-a5b1-7b70150b20d7",
+      "name": "Replacement Worker Update2",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/no-reply@aisus.ai/sendMail",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message\": { \"subject\": \"Replacement Worker Update\", \"body\": { \"contentType\": \"HTML\", \"content\": \"<!DOCTYPE html><html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\"><title>Replacement Worker Update</title><style>body{background:#f6f9fc;margin:0;font-family:Segoe UI,Arial,sans-serif}.container{max-width:600px;margin:32px auto;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.07)}.header{background:#1d4ed8;color:#fff;padding:20px 28px;border-radius:8px 8px 0 0;text-align:center}.title{font-size:22px;font-weight:700;margin:0}.content{padding:28px;color:#334155}.footer{font-size:13px;color:#888;text-align:center;padding:22px;border-top:1px solid #e2e8f0}.details-box{border:1px solid #e2e8f0;border-radius:8px;padding:20px;background:#f8fafc}.details-box h4{margin:0 0 15px;font-size:16px;color:#334155}.details-box p{font-size:14px;color:#475569;margin:0 0 8px}.details-box p strong{color:#334155}</style></head><body><div class=\\\"container\\\"><div class=\\\"header\\\"><h2 class=\\\"title\\\">Replacement Worker Update</h2></div><div class=\\\"content\\\"><h3 style=\\\"font-size:18px;font-weight:600;margin:0 0 20px;line-height:1.6;\\\">\" + ($('Get a record').item.json['Full Name'] || '') + \" has been approved to cover the below shift.</h3><div class=\\\"details-box\\\"><h4>Shift Details</h4><p><strong>Call-Off Worker:</strong> \" + ($('Search records').item.json['Full Name'] || '') + \"</p><p><strong>Shift Date:</strong> \" + $today.format('MM/dd/yyyy') + \"</p><p><strong>Shift Time:</strong> \" + $('Code in JavaScript').item.json.Start.toDateTime().toFormat('hh:mm a') + \"</p><p style=\\\"margin-bottom:0;\\\"><strong>Location:</strong> \" + ($('Get a record4').item.json['Location Name/Code'] || '') + \"</p></div><p style=\\\"margin-top:24px;color:#475569;\\\">No further action is required for this shift.</p></div><div class=\\\"footer\\\">&copy; 2025 ESS Workforce Management</div></div></body></html>\" }, \"toRecipients\": [{ \"emailAddress\": { \"address\": \"rakshit.siliconstream@gmail.com\" } }] }, \"saveToSentItems\": true }) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -64,
+        560
+      ],
+      "id": "4e05884c-b4d1-45f5-8fa0-ea469f9a437a",
+      "name": "Replacement Worker Update3",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOAuth2Api": {
+          "id": "jzUDNSP4TdP3oJst",
+          "name": "Microsoft account 4"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Get a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Search records6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or update a record": {
+      "main": [
+        [
+          {
+            "node": "Replacement Worker Update1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an SMS/MMS/WhatsApp message": {
+      "main": [
+        [
+          {
+            "node": "Search records2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record": {
+      "main": [
+        [
+          {
+            "node": "Replacement Worker Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records1": {
+      "main": [
+        [
+          {
+            "node": "Search records4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an SMS/MMS/WhatsApp message1": {
+      "main": [
+        []
+      ]
+    },
+    "Search records2": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Delete a record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records3": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Search records1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Get a record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records4": {
+      "main": [
+        [
+          {
+            "node": "Search records7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a record": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a record1": {
+      "main": [
+        [
+          {
+            "node": "Search records3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records5": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records7": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get a record4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a record4": {
+      "main": [
+        [
+          {
+            "node": "Search records5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records6": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or update a record1": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or update a record2": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replacement Worker Update": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replacement Worker Update1": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replacement Worker Update2": {
+      "main": [
+        []
+      ]
+    },
+    "Replacement Worker Update3": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "sBKDvt9PY6dPieSY"
+  },
+  "versionId": "77bfa561-952f-442a-ac29-c3d92a235641",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "090ab597ad25e7a672f4ec6c76059e29c862c56e1bca98bfbd156147928a9c41"
+  },
+  "id": "pGI4ngpicjvD82Ml",
+  "tags": []
+}
